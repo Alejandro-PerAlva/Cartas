@@ -334,8 +334,7 @@ export class Table {
         h('div.hero-name', g.s.hero.name), h('div.hero-prof', `Competencia: ${prof}`),
         h('dl', h('dt', 'Nivel'), h('dd', `${s.level} / 5`), h('dt', 'Moral'), h('dd', `${s.morality > 0 ? '+' : ''}${s.morality}`), h('dt', 'Ojos'), h('dd', `${s.eyes} / 10`),
           h('dt', 'Enemigos'), h('dd', String(g.s.stats.kills)), h('dt', 'Turnos'), h('dd', String(g.s.stats.turns || 0)), h('dt', 'Carga'), h('dd' + (over ? '.over' : ''), g.s.hero.carryRule === 'weaponsOnly' ? 'Solo armas' : `${s.weight} / ${s.maxWeight}`)));
-      const bag = h('button.side-bag', { onclick: (e) => { e.stopPropagation(); this.app.toggleTray(); } }, h('b', 'MOCHILA'), h('span', `${v.invCount} objeto${v.invCount === 1 ? '' : 's'}`));
-      box.append(bag); return box;
+      return box;
     });
     const sub = (txt, y) => h('div.side-sub', { style: { left: S.x + 'px', top: y + 'px', width: S.w + 'px' } }, txt);
     const mercs = v.mercs || []; const afs = v.afflictions || [];
