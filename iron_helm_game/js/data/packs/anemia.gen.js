@@ -1415,7 +1415,7 @@ export default {
  "rules": [
   {
    "name": "ANEMIA 4.0",
-   "text": "Este libro ofrece un puñado de variantes para incorporar a las aventuras de Iron Helm. Está pensado para utilizarse con todo el contenido publicado del juego. Lo ideal es introducirlas poco a poco, ya que cuantas más variantes se incorporen, más largas serán las partidas. Cada jugador puede elegir las que más le gusten: algunas harán que las partidas sean más asequibles, mientras que otras aumentarán la dificultad.\nSe incluyen nuevos personajes, habilidades, pociones, cartas de trama, aflicciones, entornos, enemigos y jefes. Para utilizarlos, basta con añadirlos a sus respectivos mazos.",
+   "text": "Expansión fanmade para Iron Helm de Matthew Biddle (usuario mattgreenbean en la BGG). Tradumaquetación: Aizen Myo 4U (2023). Correcciones: Koldan.\nEste libro ofrece un puñado de variantes para incorporar a las aventuras de Iron Helm. Está pensado para utilizarse con todo el contenido publicado del juego. Lo ideal es introducirlas poco a poco, ya que cuantas más variantes se incorporen, más largas serán las partidas. Cada jugador puede elegir las que más le gusten: algunas harán que las partidas sean más asequibles, mientras que otras aumentarán la dificultad.\nSe incluyen nuevos personajes, habilidades, pociones, cartas de trama, aflicciones, entornos, enemigos y jefes. Para utilizarlos, basta con añadirlos a sus respectivos mazos.",
    "img": "expansions/anemia/card_045.jpg",
    "group": "intro"
   },
@@ -1880,7 +1880,7 @@ export default {
   },
   "intro": {
    "name": "ANEMIA 4.0",
-   "text": "Este libro ofrece un puñado de variantes para incorporar a las aventuras de Iron Helm. Está pensado para utilizarse con todo el contenido publicado del juego. Lo ideal es introducirlas poco a poco, ya que cuantas más variantes se incorporen, más largas serán las partidas. Cada jugador puede elegir las que más le gusten: algunas harán que las partidas sean más asequibles, mientras que otras aumentarán la dificultad.\nSe incluyen nuevos personajes, habilidades, pociones, cartas de trama, aflicciones, entornos, enemigos y jefes. Para utilizarlos, basta con añadirlos a sus respectivos mazos.",
+   "text": "Expansión fanmade para Iron Helm de Matthew Biddle (usuario mattgreenbean en la BGG). Tradumaquetación: Aizen Myo 4U (2023). Correcciones: Koldan.\nEste libro ofrece un puñado de variantes para incorporar a las aventuras de Iron Helm. Está pensado para utilizarse con todo el contenido publicado del juego. Lo ideal es introducirlas poco a poco, ya que cuantas más variantes se incorporen, más largas serán las partidas. Cada jugador puede elegir las que más le gusten: algunas harán que las partidas sean más asequibles, mientras que otras aumentarán la dificultad.\nSe incluyen nuevos personajes, habilidades, pociones, cartas de trama, aflicciones, entornos, enemigos y jefes. Para utilizarlos, basta con añadirlos a sus respectivos mazos.",
    "img": "expansions/anemia/card_045.jpg"
   }
  }

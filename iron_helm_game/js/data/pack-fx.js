@@ -15,8 +15,8 @@
  */
 
 /* ================================================================================================ PACKS
- * type: 'campaign' | 'module' | 'mode'.  Un `mode` (p. ej. ANEMIA 4.0) se activa como un módulo (va en
- * `config.modules`) pero la interfaz lo muestra en la lista de expansiones. */
+ * type: 'campaign' | 'module' | 'mode'.  Un `mode` (modo fanmade, p. ej. ANEMIA 4.0) se activa como un módulo (va en
+ * `config.modules`) pero la interfaz lo muestra en su propia sección «Modos fanmade». */
 export const PACKS = [
   {
     id: 'warren', name: 'Warren of Despair', es: 'Laberinto de la Desesperación', type: 'campaign', number: 1, adventureLevel: 2,
@@ -102,7 +102,7 @@ export const PACKS = [
   },
   {
     id: 'anemia', name: 'ANEMIA 4.0', es: 'Anemia 4.0', type: 'mode', number: 16,
-    blurb: 'Nuevos héroes, jefes, enemigos, tramas, entornos y un puñado de reglas variantes opcionales.',
+    blurb: 'Expansión fanmade de Matthew Biddle (Aizen Myo 4U): nuevos héroes, jefes, enemigos, tramas, entornos y un puñado de reglas variantes opcionales.',
     rules: ['Héroes La Bestia, Mae, Samurái, Thorn y Gene Slash; esbirros David Galahad y Gral el Pirata.',
       'Enemigos y peligros nuevos (Mutante, Arenas Movedizas, Poza de Ácido…), 22 tramas, 4 entornos del Oeste y 6 jefes finales.',
       'Pociones, habilidades, equipo y aflicciones nuevas (Amnesia, Fiebre del Oro, Adrenalina).',
