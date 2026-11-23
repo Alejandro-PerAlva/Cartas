@@ -30,7 +30,7 @@ export class Table {
 
   /* ================================================================ construcción */
   _build() {
-    const ex = this.cat?.extras; const extras = !!ex && Object.values(ex).some(Boolean);
+    const ex = this.cat?.extras; const extras = true;   // la franja de extras siempre existe: ahí están los jefes finales
     configureLayout({ extras, side: !!(ex?.mercenaries || ex?.afflictions) });
     this.viewport = h('div#viewport');
     this.table = h('div#table', { style: { width: L.TABLE.w + 'px', height: L.TABLE.h + 'px' } });
@@ -70,7 +70,7 @@ export class Table {
     this.trashEl = add('c', h('div.trash', { style: this._rectStyle(Z.trash), dataset: { drop: 'trash' } }, h('span', '✕'), h('b', 'SOLTAR AQUÍ'), h('small', 'descartar el objeto')));
     // franja de expansiones
     if (L.extras) {
-      this.stripPanel = add('d', h('div.panel.strip', { style: this._rectStyle(Z.strip) }, h('div.panel-title', 'EXPANSIONES')));
+      this.stripPanel = add('d', h('div.panel.strip', { style: this._rectStyle(Z.strip) }, h('div.panel-title', 'EXTRAS')));
     }
   }
 
@@ -202,8 +202,8 @@ export class Table {
     this._deck('d_plots', 'plots', c.plots, b('plots'));
     this._deck('d_trappings', 'trappings', c.trappings, b('trappings'), { empty: 'Equipo agotado' });
     this._deck('d_skills', 'skills', c.skills, b('skills'), { badge: learn });
-    // jefes finales: el mazo, boca abajo, en el cuarto hueco de puertas
-    if (c.bosses > 0 && this.cat.pools.bosses.length) this._deck('d_bosses', 'door4', c.bosses, b('bosses'), { dy: -10 });
+    // jefes finales: junto al resto de cartas extras (se pueden consultar en cualquier momento)
+    if (c.bosses > 0 && this.cat.pools.bosses.length) this._deck('d_bosses', 'x_boss', c.bosses, b('bosses'), { size: CARD_X });
     else this.slot('d_bosses', 'd', [0], () => null);
   }
 
@@ -220,7 +220,7 @@ export class Table {
       el.addEventListener('click', (e) => { if (this.cam.wasDrag()) return; e.stopPropagation(); this.app.onZoneTap(zone, e); });
       return el;
     });
-    topPile('p_loot', 'lootUsed', p.lootUsed); topPile('p_potions', 'potionsUsed', p.potionsUsed); topPile('p_dd', 'door3', p.dungeonDiscard, true);
+    topPile('p_loot', 'lootUsed', p.lootUsed); topPile('p_potions', 'potionsUsed', p.potionsUsed); topPile('p_dd', 'ddiscard', p.dungeonDiscard, true);
     // cementerio: pila de enemigos derrotados, igual que las de objetos y pociones (la carta de arriba se oscurece si ya se gastó en una habilidad)
     topPile('p_grave', 'graveyard', p.graveyard.map((e) => e.uid), false, !!p.graveyard[p.graveyard.length - 1]?.spent);
     // tramas resueltas: escalonadas con los ojos a la vista
@@ -391,6 +391,7 @@ export class Table {
     if (!L.extras) return;
     const ex = this.cat.extras || {}; const v = this.vs; const g = this.game; const Z = L.ZONES;
     const label = (zone, text) => h('div.zone-label.x', { style: { left: Z[zone].x - 20 + 'px', top: Z[zone].y - 30 + 'px', width: Z[zone].w + 40 + 'px', textAlign: 'center', zIndex: 4 } }, text);
+    if (v.counts.bosses > 0 && this.cat.pools.bosses.length) this.slot('x_boss_lbl', 'd', [1], () => label('x_boss', 'JEFES'));
     if (ex.environments) {
       this.slot('x_env', 'd', [v.env], () => {
         const box = h('div', { style: { position: 'absolute', inset: 0, pointerEvents: 'none' } }, label('x_env', 'ENTORNO'));
@@ -424,13 +425,13 @@ export class Table {
   /** el cursor de mano solo aparece en lo que de verdad responde ahora (no en huecos vacíos o inertes) */
   _live() {
     if (!this.hits) return; const g = this.game; const pt = g.s.prompt?.type; const v = this.vs; const p = v.piles;
-    const on = new Set(['dungeon', 'enemies', 'loot', 'potions', 'plots', 'map', 'morality', 'c_hero', 'x_art', 'x_aff', 'x_enc']);
+    const on = new Set(['dungeon', 'enemies', 'loot', 'potions', 'plots', 'map', 'morality', 'c_hero', 'x_art', 'x_aff', 'x_enc', 'x_boss']);
     if (['pair', 'decide', 'chooseOne'].includes(pt)) { on.add('door1'); on.add('door2'); }
     if (pt === 'setup') on.add('trappings');
     if (v.skills.length) { on.add('c_skills'); on.add('skills'); }
     if (v.canEquip) for (const z of ['c_head', 'c_body', 'c_main', 'c_off', 'c_acc']) on.add(z);
     if (p.graveyard.length) on.add('graveyard'); if (p.plotsPlayed.length) on.add('plotsUsed');
-    if (p.lootUsed.length) on.add('lootUsed'); if (p.potionsUsed.length) on.add('potionsUsed'); if (p.dungeonDiscard.length) on.add('door3');
+    if (p.lootUsed.length) on.add('lootUsed'); if (p.potionsUsed.length) on.add('potionsUsed'); if (p.dungeonDiscard.length) on.add('ddiscard');
     for (const [name, el] of Object.entries(this.hits)) el.classList.toggle('live', on.has(name));
   }
   /** señales discretas de qué se puede tocar (sin brillos) */

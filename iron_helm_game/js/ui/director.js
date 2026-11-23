@@ -43,10 +43,10 @@ export class Director {
   deckZoneOf(def) {
     if (def.kind === 'item') return def.deck === 'potion' ? 'potions' : def.deck === 'trapping' ? 'trappings' : 'loot';
     if (def.kind === 'enemy') return def.inLootDeck ? 'loot' : 'enemies';
-    return { plot: 'plots', boss: 'door4', skill: 'skills' }[def.kind] || 'dungeon';
+    return { plot: 'plots', boss: 'x_boss', skill: 'skills' }[def.kind] || 'dungeon';
   }
   discardZoneOf(def) {
-    if (def.isDungeon) return 'door3';
+    if (def.isDungeon) return 'ddiscard';
     if (def.kind === 'item') return def.deck === 'potion' ? 'potionsUsed' : 'lootUsed';
     return 'lootUsed';
   }
@@ -143,21 +143,21 @@ export class Director {
   }
   async on_resolving(ev) { if (this.spot?.uid === ev.uid) this.markSide(ev.side, this.g.def(ev.uid)); await this.wait(120); }
   clearSpot(instant = false) { if (!this.spot) return; this.spot.gh.remove(); this.spot = null; }
-  async dismissSpot(zone = 'door3') {
+  async dismissSpot(zone = 'ddiscard') {
     if (!this.spot) return;
     const gh = this.spot.gh; const uid = this.spot.uid; const def = this.g.def(uid); this.spot = null; this.dismissed.add(uid);
     gh.el.querySelectorAll('.half').forEach((n) => n.remove()); gh.el.style.pointerEvents = 'none';
     sound.slide();
     await gh.fly(this.T.screenRect(zone, undefined), { ms: this.k(520), flip: false, rot: 4 });
     gh.remove();
-    if (def.isDungeon && zone === 'door3') { const l = this.vs.piles.dungeonDiscard; if (!l.includes(uid)) l.push(uid); this.T.render(); }
+    if (def.isDungeon && zone === 'ddiscard') { const l = this.vs.piles.dungeonDiscard; if (!l.includes(uid)) l.push(uid); this.T.render(); }
   }
   /** al girar la pantalla, la carta que se está mirando se vuelve a colocar en su sitio */
   relayout() { if (this.spot) this.spot.gh.set(this.spotRect(), 0); }
   /** a dónde va la carta que se está mirando cuando se retira: trama → tramas resueltas, enemigo → cementerio, resto → descarte */
   spotZone() {
-    const sp = this.spot; if (!sp) return 'door3'; if (sp.plot) return 'plotsUsed';
-    const d = this.g.def(sp.uid); return d.kind === 'enemy' && !d.isDungeon ? 'graveyard' : 'door3';
+    const sp = this.spot; if (!sp) return 'ddiscard'; if (sp.plot) return 'plotsUsed';
+    const d = this.g.def(sp.uid); return d.kind === 'enemy' && !d.isDungeon ? 'graveyard' : 'ddiscard';
   }
   /** la carta de una escena (trama, altar…) se queda a la vista mientras se resuelve lo que has elegido */
   adoptSpot(uid, rect, { plot = false } = {}) {
@@ -231,7 +231,7 @@ export class Director {
     if (this.spot) await this.dismissSpot(this.spotZone());
     sound.deal();
     const zone = info?.zone || this.deckZoneOf(def);
-    const from = info?.from || T.screenRect(zone === 'door4' ? 'enemies' : zone);
+    const from = info?.from || T.screenRect(zone);
     gh = new Ghost({ front: g.img(ev.uid), back: backOf(def), rect: from, z: 160 });
     await gh.fly(this.showRect(), { ms: this.k(560), flip: true, arc: 40 });
     const what = def.kind === 'artifact' || def.deck === 'artifact' ? 'Artefacto' : def.deck === 'potion' ? 'Poción' : def.deck === 'trapping' ? 'Equipo' : 'Botín';
@@ -355,7 +355,7 @@ export class Director {
   async on_boss(ev) {
     const g = this.g; const def = g.def(ev.uid); this.clearSpot();
     sound.gong(); vignette('gold');
-    const gh = new Ghost({ front: g.img(ev.uid), back: backOf(def), rect: this.T.screenRect('door4'), z: 150 });
+    const gh = new Ghost({ front: g.img(ev.uid), back: backOf(def), rect: this.T.screenRect('x_boss'), z: 150 });
     await gh.fly(this.spotRect(), { ms: this.k(900), flip: true, arc: 60 });
     await this.hold({ lines: [`¡${def.name} despierta!`], cue: 'Toca para enfrentarte a él' }); gh.remove();
   }
@@ -435,7 +435,7 @@ export class Director {
   async on_campMoment(ev) { sound.page(); await this.hold({ lines: [`Momento de paz con ${ev.who}`, ev.text], cue: 'Toca para continuar', min: 700 }); }
   async on_dungeonSwap(ev) {
     const g = this.g; const def = g.def(ev.to); sound.flip();
-    if (this.spot?.uid === ev.from) await this.dismissSpot('door3'); else this.dismissed.add(ev.from);
+    if (this.spot?.uid === ev.from) await this.dismissSpot('ddiscard'); else this.dismissed.add(ev.from);
     const p = this.vs.piles.dungeonDiscard; if (!p.includes(ev.from)) p.push(ev.from);
     this.vs.counts.dungeon = Math.max(0, this.vs.counts.dungeon - 1); this.T.render();
     const gh = new Ghost({ front: g.img(ev.to), back: backOf(def), rect: this.T.screenRect('dungeon'), z: 150 });

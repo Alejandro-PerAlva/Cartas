@@ -12,7 +12,7 @@
 const CS = 1175 / 1900;            // escala del tapete de personaje
 export const CARD_D = { w: 200, h: 281 };   // carta sobre el tapete de mazmorra
 export const CARD_C = { w: 172, h: 242 };   // carta sobre el tapete de personaje
-export const CARD_X = { w: 168, h: 236 };   // carta en la franja de expansiones
+export const CARD_X = { w: 150, h: 211 };   // carta en la franja de expansiones
 export const BOARD_H = 1275;
 
 /** Huecos del tapete de mazmorra (coordenadas mostradas 2000×1175) */
@@ -21,8 +21,8 @@ const D = {
   plotsUsed: [55, 375, 260, 660], potionsUsed: [295, 375, 500, 660], lootUsed: [535, 375, 740, 660], graveyard: [775, 375, 980, 660],
   trappings: [1495, 55, 1700, 340], skills: [1735, 55, 1940, 340],
   map: [1495, 375, 1700, 660], morality: [1735, 375, 1940, 660],
-  dungeon: [150, 760, 390, 1115],
-  door1: [530, 810, 740, 1090], door2: [775, 810, 980, 1090], door3: [1015, 810, 1220, 1090], door4: [1255, 810, 1460, 1090],
+  // las 4 puertas verdes (la puerta decorada de la izquierda no se usa): descarte · mazo (la más iluminada) · las dos cartas del turno, hacia la derecha
+  ddiscard: [530, 810, 740, 1090], dungeon: [775, 810, 980, 1090], door1: [1015, 810, 1220, 1090], door2: [1255, 810, 1460, 1090],
   rubble: [1580, 735, 1900, 1100],
 };
 /** Huecos del tapete de personaje (coordenadas originales 1199×1900) */
@@ -67,10 +67,11 @@ export function configureLayout({ extras = false, side: withSide = false } = {})
   const strip = { x: dmat.x + dmat.w + 40, y: 50, w: extraW - 40 - 20, h: 1175 };
   ZONES.strip = { ...strip, mat: 'd' };
   const sx = strip.x + (strip.w - CARD_X.w) / 2;
-  ZONES.x_env = { x: sx, y: strip.y + 120, w: CARD_X.w, h: CARD_X.h, mat: 'd' };
-  ZONES.x_art = { x: sx, y: strip.y + 120 + 300, w: CARD_X.w, h: CARD_X.h, mat: 'd' };
-  ZONES.x_aff = { x: sx, y: strip.y + 120 + 600, w: CARD_X.w, h: CARD_X.h, mat: 'd' };
-  ZONES.x_enc = { x: sx - 8, y: strip.y + 120 + 900, w: CARD_X.w + 16, h: 120, mat: 'd' };
+  ZONES.x_boss = { x: sx, y: strip.y + 75, w: CARD_X.w, h: CARD_X.h, mat: 'd' };
+  ZONES.x_env = { x: sx, y: strip.y + 75 + 232, w: CARD_X.w, h: CARD_X.h, mat: 'd' };
+  ZONES.x_art = { x: sx, y: strip.y + 75 + 464, w: CARD_X.w, h: CARD_X.h, mat: 'd' };
+  ZONES.x_aff = { x: sx, y: strip.y + 75 + 696, w: CARD_X.w, h: CARD_X.h, mat: 'd' };
+  ZONES.x_enc = { x: sx - 8, y: strip.y + 75 + 932, w: CARD_X.w + 16, h: 120, mat: 'd' };
 
   const WELLS = {}; for (const [k, [x, y, r]] of Object.entries(W)) WELLS[k] = { cx: dmat.x + x, cy: dmat.y + y, r };
   const CWELLS = {}; for (const [k, [x, y]] of Object.entries(CW)) CWELLS[k] = { cx: cmat.x + x * CS, cy: cmat.y + y * CS, r: 36 };

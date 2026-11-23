@@ -236,8 +236,8 @@ export class App {
       case 'plotsUsed': if (g.s.z.plotsPlayed.length) this.openJournal('plots'); break;
       case 'lootUsed': this.overlays.showPile('Botín descartado', 'Las cartas de botín que ya has usado o descartado (la última, arriba).', g.s.z.lootDiscard); break;
       case 'potionsUsed': this.overlays.showPile('Pociones usadas', 'Las pociones que ya has bebido o lanzado (la última, arriba).', g.s.z.potionsDiscard); break;
-      case 'door3': this.overlays.showPile('Descarte de la mazmorra', 'Las cartas de mazmorra de este nivel (la última, arriba). Las que descartaste sin mirar siguen boca abajo.', g.s.z.dungeonDiscard, { hidden: (u) => !(g.s.seen || []).includes(u) }); break;
-      case 'door4': this.toast(`Mazo de jefes finales: ${g.s.z.bosses?.length ?? 0} cartas. El jefe se decide al terminar la aventura.`); break;
+      case 'ddiscard': this.overlays.showPile('Descarte de la mazmorra', 'Las cartas de mazmorra de este nivel (la última, arriba). Las que descartaste sin mirar siguen boca abajo.', g.s.z.dungeonDiscard, { hidden: (u) => !(g.s.seen || []).includes(u) }); break;
+      case 'x_boss': { const bs = g.s.z.bosses || []; if (bs.length === 1) this.overlays.inspect({ uid: bs[0] }); else this.overlays.showPile('Jefes finales', 'Los posibles jefes de esta aventura. Al terminar, la debilidad más común de los enemigos derrotados decide cuál despierta.', bs); break; }
       case 'enemies': this.toast(`Mazo de enemigos: ${g.s.z.enemies.length} cartas.`); break;
       case 'loot': this.toast(`Mazo de botín: ${g.s.z.loot.length} cartas.`); break;
       case 'potions': this.toast(`Mazo de pociones: ${g.s.z.potions.length} cartas.`); break;
@@ -301,7 +301,7 @@ export class App {
   async afterIdle() {
     if (!this.game) return;
     const g = this.game; const T = this.table; const pr = g.s.prompt;
-    if (g.s.over) { this.hint(''); this.setActions([]); if (this.director.spot?.fx) await this.director.hold({ lines: this.director.recent }); await this.director.dismissSpot?.('door3'); T.vs = T.extract(); T.render(); this.updateHud(); this.updateTray(); this.arena.close(); this.overlays.clearPrompt(); this.overlays.showEnd(g.s.over); return; }
+    if (g.s.over) { this.hint(''); this.setActions([]); if (this.director.spot?.fx) await this.director.hold({ lines: this.director.recent }); await this.director.dismissSpot?.('ddiscard'); T.vs = T.extract(); T.render(); this.updateHud(); this.updateTray(); this.arena.close(); this.overlays.clearPrompt(); this.overlays.showEnd(g.s.over); return; }
     const inCombat = ['avoidEnemy', 'pre', 'attack', 'postRoll', 'enemyRoll'].includes(pr?.type);
     if (!inCombat && !['decide', 'choice'].includes(pr?.type) && this.director.spot) {
       const sp = this.director.spot; const plot = sp.plot;

@@ -184,7 +184,7 @@ export class Menu {
     const byName = (n) => { let d = null; try { d = cat.findByName?.(n); d = Array.isArray(d) ? d[0] : d; } catch { /* sin carta */ } return { name: n, img: d?.img }; };
     const trappings = hero._eq ? hero._eq.map(byName) : (hero.trappings || []).map(ref); const skills = hero._sk ? hero._sk.map(byName) : (hero.skills || []).map(ref);
     /** nombres de cartas: tocar uno muestra la carta grande */
-    const links = (list) => list.flatMap((c, i) => [i ? ' · ' : '', c.img ? h('button.card-link', { title: `Ver ${c.name}`, onclick: () => { sound.tap(); this.zoom(c.img); } }, c.name) : c.name]);
+    const links = (list) => list.flatMap((c, i) => [i ? ' · ' : '', c.img ? h('button.card-link', { title: `Ver ${c.name}`, onclick: () => { sound.tap(); this.zoom(c.img, c.name); } }, c.name) : c.name]);
     const pk = hero.pack !== 'base' ? this.packs.find((p) => p.id === hero.pack) : null;
     const stage = h('div.hero-stage',
       h('div.hero-card', h('img', { src: cardPath(hero.img), alt: hero.name })),
@@ -225,7 +225,7 @@ export class Menu {
     const base = p.type === 'base';
     const on = () => (base ? !this.cfg.campaign : p.type === 'campaign' ? this.cfg.campaign === p.id : this.cfg.modules.includes(p.id));
     const counts = Object.entries(p.counts || {}).filter(([, n]) => n > 0).map(([k, n]) => h('span.chip', h('b', String(n)), ' ', countLabel(k, n)));
-    const key = (p.keyCards || []).map((c) => h('button.thumb', { title: c.name, onclick: () => this.zoom(c.img) }, h('img', { src: cardPath(c.img), alt: c.name })));
+    const key = (p.keyCards || []).map((c) => h('button.thumb', { title: c.name, onclick: () => this.zoom(c.img, c.name) }, h('img', { src: cardPath(c.img), alt: c.name })));
     const toggle = h('button.btn.primary', { onclick: () => { sound.flip(); if (base) this.cfg.campaign = null; else this.toggle(p); this.afterChange(); sync(); } });
     const sync = () => { toggle.textContent = base ? (on() ? 'AVENTURA ELEGIDA' : 'ELEGIR ESTA AVENTURA') : on() ? 'QUITAR DE LA PARTIDA' : p.type === 'campaign' ? 'ELEGIR ESTA CAMPAÑA' : 'AÑADIR A LA PARTIDA'; };
     sync();
@@ -247,8 +247,13 @@ export class Menu {
         h('button.close-x', { onclick: () => el.remove(), 'aria-label': 'Cerrar' }, icon('x', 18))));
     this.menuEl.append(el);
   }
-  zoom(img) {
-    const el = h('div.modal.zoom', { onclick: () => el.remove() }, h('div.veil.dark'), h('img', { src: cardPath(img), alt: '' }));
+  /** carta en grande, con el mismo visor que los objetos de la mochila (nombre, CERRAR y márgenes seguros en móvil) */
+  zoom(img, name = '') {
+    const close = () => { sound.tap(); el.remove(); };
+    const el = h('div.inspect.in-menu', h('div.inspect-veil', { onclick: close }),
+      h('div.inspect-body', h('div.inspect-card', { onclick: close }, h('img', { src: cardPath(img), alt: name })),
+        name ? h('div.inspect-meta', name) : null,
+        h('div.inspect-acts', h('button.btn.quiet', { onclick: close }, 'CERRAR'))));
     this.menuEl.append(el);
   }
 }
