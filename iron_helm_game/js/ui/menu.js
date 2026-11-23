@@ -70,7 +70,7 @@ export class Menu {
       const el = h('div.opt.' + kind, { dataset: { id: p?.id || 'base' } },
         h('div.opt-mark'),
         h('div.opt-main', h('b', p ? p.es : 'Mazmorra original'), h('small', p ? this.sub(p) : 'Juego base · cinco niveles de ocho turnos. El jefe lo decide la debilidad más común de los enemigos que derrotes.')),
-        h('button.opt-info', { title: p ? 'Qué incluye' : 'Cómo se juega', 'aria-label': p ? `Qué incluye ${p.es}` : 'Cómo se juega la mazmorra original', onclick: (e) => { e.stopPropagation(); sound.tap(); if (p) this.showPackInfo(p); else this.showManual('original'); } }, icon('info', 22)));
+        h('button.opt-info', { title: p ? 'Qué incluye' : 'Cómo se juega', 'aria-label': p ? `Qué incluye ${p.es}` : 'Cómo se juega la mazmorra original', onclick: (e) => { e.stopPropagation(); sound.tap(); this.showPackInfo(p || this.basePack()); } }, icon('info', 22)));
       el.addEventListener('click', () => { sound.flip(); if (!p) this.cfg.campaign = null; else this.toggle(p); this.afterChange(); });
       return el;
     };
@@ -123,6 +123,7 @@ export class Menu {
     this.menuEl.append(el);
   }
   sub(p) {
+    if (p.type === 'base') return 'Juego base · cinco niveles de ocho turnos';
     const bits = [p.type === 'campaign' ? `Campaña · nivel de aventura ${p.adventureLevel ?? '?'}` : p.type === 'mode' ? 'Modo fanmade' : 'Módulo'];
     if (p.name && p.name !== p.es) bits.push(p.name);
     return bits.join(' · ');
@@ -202,21 +203,36 @@ export class Menu {
   }
 
   /* ================================================================ ficha de una expansión */
+  /** ficha de la mazmorra original, con el mismo formato que la de cada expansión */
+  basePack() {
+    if (this._basePack) return this._basePack;
+    const cat = buildCatalog({}); const P = cat.pools; const n = (l) => (l || []).reduce((t, d) => t + (d.copies || 1), 0);
+    const counts = { heroes: n(P.heroes), bosses: n(P.bosses), enemies: n(P.enemies), items: n(P.loot) + n(P.potions) + n(P.trappings), plots: n(P.plots), skills: n(P.skills), dungeonCards: n(P.dungeon) };
+    const keyCards = []; const kc = (d, kind) => { if (d && keyCards.length < 8 && !keyCards.some((k) => k.img === d.img)) keyCards.push({ img: d.img, name: d.name, kind }); };
+    kc(P.bosses[0], 'boss'); P.heroes.forEach((d) => kc(d, 'hero'));
+    for (let r = 0; r < 3; r++) for (const l of [P.enemies, P.plots, P.loot, P.dungeon, P.skills]) kc((l || [])[r], 'card');
+    this._basePack = { id: 'base', es: 'Mazmorra original', type: 'base', counts, keyCards,
+      blurb: 'El juego base de Iron Helm: un aventurero veterano busca un último botín antes de colgar la espada. No necesita expansiones.',
+      rules: ['Cinco niveles de ocho turnos cada uno; al acabar cada nivel se resuelve una trama.', 'El jefe final lo decide la debilidad más común de los enemigos que derrotes (fuego, hielo o no muerto).',
+        'Cinco héroes, tres jefes y los mazos de enemigos, botín, pociones, equipo, habilidades y tramas del juego base.', 'Se puede combinar con cualquier expansión modular y con las reglas variantes.'] };
+    return this._basePack;
+  }
   showPackInfo(p) {
-    const on = () => (p.type === 'campaign' ? this.cfg.campaign === p.id : this.cfg.modules.includes(p.id));
+    const base = p.type === 'base';
+    const on = () => (base ? !this.cfg.campaign : p.type === 'campaign' ? this.cfg.campaign === p.id : this.cfg.modules.includes(p.id));
     const counts = Object.entries(p.counts || {}).filter(([, n]) => n > 0).map(([k, n]) => h('span.chip', h('b', String(n)), ' ', countLabel(k, n)));
     const key = (p.keyCards || []).map((c) => h('button.thumb', { title: c.name, onclick: () => this.zoom(c.img) }, h('img', { src: cardPath(c.img), alt: c.name })));
-    const toggle = h('button.btn.primary', { onclick: () => { sound.flip(); this.toggle(p); this.afterChange(); sync(); } });
-    const sync = () => { toggle.textContent = on() ? 'QUITAR DE LA PARTIDA' : p.type === 'campaign' ? 'ELEGIR ESTA CAMPAÑA' : 'AÑADIR A LA PARTIDA'; };
+    const toggle = h('button.btn.primary', { onclick: () => { sound.flip(); if (base) this.cfg.campaign = null; else this.toggle(p); this.afterChange(); sync(); } });
+    const sync = () => { toggle.textContent = base ? (on() ? 'AVENTURA ELEGIDA' : 'ELEGIR ESTA AVENTURA') : on() ? 'QUITAR DE LA PARTIDA' : p.type === 'campaign' ? 'ELEGIR ESTA CAMPAÑA' : 'AÑADIR A LA PARTIDA'; };
     sync();
     const el = h('div.modal', h('div.veil', { onclick: () => el.remove() }),
       h('div.sheet.scroll.wide', h('h2', p.es), h('div.pack-sub', this.sub(p)), p.blurb ? h('p.narr', p.blurb) : null,
         counts.length ? h('div.chips-row', ...counts) : null,
-        p.rules?.length ? [h('h4', 'Cómo cambia la partida'), h('ul.rules', ...p.rules.map((r) => h('li', r)))] : null,
+        p.rules?.length ? [h('h4', base ? 'Qué incluye' : 'Cómo cambia la partida'), h('ul.rules', ...p.rules.map((r) => h('li', r)))] : null,
         p.includes?.length ? h('p.col-note', `Incluye también: ${p.includes.map((id) => this.packs.find((x) => x.id === id)?.es || id).join(', ')}.`) : null,
         p.exclusive ? h('p.col-note', 'Sustituye al mazo de mazmorra original: no se puede combinar con otro mazo alternativo.') : null,
         key.length ? [h('h4', 'Cartas destacadas'), h('div.thumbs', ...key)] : null,
-        h('div.btnrow', toggle, p.id === 'anemia' ? h('button.btn', { onclick: () => { sound.tap(); el.remove(); this.showManual('anemia'); } }, 'MANUAL') : null),
+        h('div.btnrow', toggle, base || p.id === 'anemia' ? h('button.btn', { onclick: () => { sound.tap(); el.remove(); this.showManual(base ? 'original' : 'anemia'); } }, 'MANUAL') : null),
         h('button.close-x', { onclick: () => el.remove(), 'aria-label': 'Cerrar' }, icon('x', 18))));
     this.menuEl.append(el);
   }
