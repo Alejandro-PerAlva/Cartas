@@ -7,6 +7,7 @@ import { cardEl, backOf, cardPath } from './cards.js';
 import { sound } from './audio.js';
 import { icon } from './icons.js';
 import { mapSpotsFor } from './mapspots.js';
+import { manualBody } from './manual.js';
 
 const WEAK = { fire: '🔥 Fuego', ice: '❄️ Hielo', undead: '💀 No muerto' };
 
@@ -314,7 +315,7 @@ export class Overlays {
   /* ----------------------------------------------------------------- diario */
   showJournal(tab = 'map') {
     this.app._jTab = tab; const g = this.g; const s = g.s; const cat = g.cat;
-    const tabs = [['map', '🗺', 'Mapa y moral'], ['plots', '📜', 'Tramas'], ['grave', '💀', 'Cementerio'], ['skills', '⚔', 'Habilidades'], ['log', '📖', 'Registro']];
+    const tabs = [['map', '🗺', 'Mapa y moral'], ['plots', '📜', 'Tramas'], ['grave', '💀', 'Cementerio'], ['skills', '⚔', 'Habilidades'], ['log', '📖', 'Registro'], ['manual', '📘', 'Manual']];
     const page = h('div.page');
     const book = h('div.book', h('div.pages', page), h('div.tabs', ...tabs.map(([id, ic, t]) => h('div.tab' + (id === tab ? '.on' : ''), { title: t, onclick: () => { sound.page(); this.showJournal(id); } }, ic))), h('button.close-x', { style: 'right:-6px;top:-10px', onclick: () => { sound.click(); this.clearUser(); } }, '✕'));
     const spot = (m, [x, y]) => h('div.pawn', { style: `left:${x * 100}%;top:${y * 100}%` });
@@ -343,6 +344,9 @@ export class Overlays {
         h('h4', `Por aprender · enemigos disponibles: ${g.unspentEnemies().length}`),
         ...s.z.skills.map((u) => { const d = g.def(u); if (s.hero.skills.includes(d.id)) return null; const cost = g.skillCost(d.id); const can = g.canLearn(d.id) && ['turn', 'setup'].includes(s.prompt?.type);
           return h('div.skillrow', h('img', { src: cardPath(g.img(u)), onclick: () => this.inspect({ uid: u }) }), h('div', h('b', `${d.name} · ${d.proficiency}`), h('p', d.text), h('button.tiny-btn' + (can ? '' : '.off'), { style: can ? '' : 'opacity:.5', onclick: () => { if (can) { this.app.act('learn', { id: d.id }); this.clearUser(); } } }, `Aprender (${cost} enemigos)`))); }));
+    } else if (tab === 'manual') {
+      const first = this.app._manTab || (s.config?.modules?.includes('anemia') ? 'anemia' : 'original');
+      page.append(h('h3', 'Manual de instrucciones'), manualBody({ tab: first, onTab: (id) => { this.app._manTab = id; } }));
     } else {
       const lines = s.log.slice(-160).reverse();
       page.append(h('h3', 'Registro de la aventura'), ...lines.map((l) => h('div.logline.' + l.cat, l.msg)));
@@ -372,7 +376,7 @@ export class Overlays {
         sw('sound', 'Sonido', (v) => sound.setMuted(!v)), sw('fast', 'Animaciones rápidas', (v) => { speed.k = v ? 0.55 : 1; }),
         sw('autoReveal', 'Revelar sola la primera carta', null, 'Ahorra un toque por turno'), sw('autoDraw', 'Robar solo al empezar cada turno', null, 'Para jugar más deprisa'), sw('preShop', 'Tienda de la posada antes de entrar', null, 'Si no, empiezas directamente'),
         sw('autoCam', 'Cámara automática en móvil'), sw('captions', 'Narración de sucesos')),
-        h('div.btnrow', h('button.btn.quiet', { onclick: () => { this.clearUser(); this.showHelp(); } }, 'AYUDA'),
+        h('div.btnrow', h('button.btn.quiet', { onclick: () => { this.clearUser(); this.showHelp(); } }, 'AYUDA'), h('button.btn.quiet', { onclick: () => { this.clearUser(); this.showJournal('manual'); } }, 'MANUAL'),
           h('button.btn', { onclick: async () => { if (await this.confirm({ title: '¿Volver al menú?', text: 'La partida se guarda al inicio de cada turno y podrás continuarla desde el menú.', yes: 'AL MENÚ', no: 'SEGUIR' })) { this.clearUser(); a.leaveToMenu(); } } }, 'MENÚ PRINCIPAL')),
         this.closeBtn(() => this.clearUser())));
     this.mountUser(el, 'settings');
@@ -386,7 +390,7 @@ export class Overlays {
           h('div', h('b', 'Fin de nivel. '), 'Tras 8 turnos comes una ración (o pierdes 3 de salud), el veneno crece y robas una trama. Con 10 ojos despierta el jefe.'),
           h('div', h('b', 'Dos tableros. '), 'Las pestañas de abajo alternan entre la ', h('b', 'Mazmorra'), ' y el ', h('b', 'Personaje'), '. En Personaje arrastras objetos entre la mochila y las ranuras del tapete (o a SOLTAR AQUÍ). Solo se cambia de equipo entre turnos.'),
           h('div', h('b', 'Controles. '), 'Toca cualquier carta para actuar; mantén pulsado (o clic derecho) para verla grande; toca una ficha del HUD para saber qué hace. Arrastra la mesa y pellizca (o rueda) para acercar. ', h('kbd', 'J'), ' diario · ', h('kbd', 'I'), ' mochila · ', h('kbd', '1'), '/', h('kbd', '2'), ' tableros · ', h('kbd', 'F'), ' encuadrar · ', h('kbd', 'M'), ' sonido.')),
-        h('div.btnrow', h('button.btn.primary', { onclick: () => this.clearUser() }, 'ENTENDIDO')), this.closeBtn(() => this.clearUser())));
+        h('div.btnrow', h('button.btn.quiet', { onclick: () => { this.clearUser(); this.showJournal('manual'); } }, 'MANUAL COMPLETO'), h('button.btn.primary', { onclick: () => this.clearUser() }, 'ENTENDIDO')), this.closeBtn(() => this.clearUser())));
     this.mountUser(el, 'help');
   }
 

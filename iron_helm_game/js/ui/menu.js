@@ -9,6 +9,7 @@ import { sound } from './audio.js';
 import { cardPath } from './cards.js';
 import { icon } from './icons.js';
 import { Builder } from './builder.js';
+import { manualBody } from './manual.js';
 
 const PROF = { agilidad: 'Agilidad', mente: 'Mente', fuerza: 'Fuerza' };
 const COUNT_LABEL = {
@@ -44,6 +45,7 @@ export class Menu {
         stats?.games ? h('small', `Partidas: ${stats.games} · victorias: ${stats.wins} · mejor fondo de jubilación: ${stats.best}`) : null),
       this.tabsEl, this.body,
       h('div.menu-foot', this.summary, h('div.menu-btns',
+        h('button.btn.quiet', { onclick: () => { sound.tap(); this.showManual(this.cfg.modules.includes('anemia') ? 'anemia' : 'original'); } }, 'MANUAL'),
         save ? h('button.btn', { onclick: () => { sound.unlock(); app.continueGame(); } }, 'CONTINUAR PARTIDA') : null,
         h('button.btn.primary.big', { onclick: () => this.start() }, 'COMENZAR AVENTURA'))));
     this.root.append(this.menuEl);
@@ -68,7 +70,7 @@ export class Menu {
       const el = h('div.opt.' + kind, { dataset: { id: p?.id || 'base' } },
         h('div.opt-mark'),
         h('div.opt-main', h('b', p ? p.es : 'Mazmorra original'), h('small', p ? this.sub(p) : 'Juego base · cinco niveles de ocho turnos. El jefe lo decide la debilidad más común de los enemigos que derrotes.')),
-        p ? h('button.opt-info', { title: 'Qué incluye', 'aria-label': `Qué incluye ${p.es}`, onclick: (e) => { e.stopPropagation(); sound.tap(); this.showPackInfo(p); } }, icon('info', 22)) : null);
+        h('button.opt-info', { title: p ? 'Qué incluye' : 'Cómo se juega', 'aria-label': p ? `Qué incluye ${p.es}` : 'Cómo se juega la mazmorra original', onclick: (e) => { e.stopPropagation(); sound.tap(); if (p) this.showPackInfo(p); else this.showManual('original'); } }, icon('info', 22)));
       el.addEventListener('click', () => { sound.flip(); if (!p) this.cfg.campaign = null; else this.toggle(p); this.afterChange(); });
       return el;
     };
@@ -214,7 +216,15 @@ export class Menu {
         p.includes?.length ? h('p.col-note', `Incluye también: ${p.includes.map((id) => this.packs.find((x) => x.id === id)?.es || id).join(', ')}.`) : null,
         p.exclusive ? h('p.col-note', 'Sustituye al mazo de mazmorra original: no se puede combinar con otro mazo alternativo.') : null,
         key.length ? [h('h4', 'Cartas destacadas'), h('div.thumbs', ...key)] : null,
-        h('div.btnrow', toggle, h('button.btn.quiet', { onclick: () => el.remove() }, 'CERRAR')),
+        h('div.btnrow', toggle, p.id === 'anemia' ? h('button.btn', { onclick: () => { sound.tap(); el.remove(); this.showManual('anemia'); } }, 'MANUAL') : null, h('button.btn.quiet', { onclick: () => el.remove() }, 'CERRAR')),
+        h('button.close-x', { onclick: () => el.remove(), 'aria-label': 'Cerrar' }, icon('x', 18))));
+    this.menuEl.append(el);
+  }
+  /** manual de instrucciones (juego original, Anemia y controles) */
+  showManual(tab = 'original') {
+    const el = h('div.modal', h('div.veil', { onclick: () => el.remove() }),
+      h('div.sheet.scroll.wide.manual-sheet', h('h2', 'Manual de instrucciones'), manualBody({ tab }),
+        h('div.btnrow', h('button.btn.primary', { onclick: () => el.remove() }, 'CERRAR')),
         h('button.close-x', { onclick: () => el.remove(), 'aria-label': 'Cerrar' }, icon('x', 18))));
     this.menuEl.append(el);
   }
