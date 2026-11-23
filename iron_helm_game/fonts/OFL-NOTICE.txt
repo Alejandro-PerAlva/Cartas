@@ -1,0 +1,4 @@
+Fuentes incluidas en este directorio (Cinzel, IM Fell English, IM Fell English SC)
+distribuidas bajo la SIL Open Font License 1.1 (https://openfontlicense.org).
+Cinzel © Natanael Gama. IM Fell types © Igino Marini.
+Obtenidas de Google Fonts.
