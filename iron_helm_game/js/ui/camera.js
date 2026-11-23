@@ -17,9 +17,14 @@ export class Camera {
   viewSize() { const r = this.vp.getBoundingClientRect(); return { w: r.width, h: r.height }; }
   area() { const v = this.viewSize(); const s = this.safe(); return { x: s.l, y: s.t, w: v.w - s.l - s.r, h: v.h - s.t - s.b }; }
   fitScale(rect = this.bounds) { const a = this.area(); return Math.min(a.w / rect.w, a.h / rect.h); }
+  /** una sola escritura de transform por fotograma, aunque lleguen varios eventos de puntero; la capa se promueve solo mientras se mueve */
   apply() {
-    this.table.style.transform = `translate(${this.x}px, ${this.y}px) scale(${this.s})`;
-    this.onChange?.(this);
+    if (this._raf) return;
+    this._raf = requestAnimationFrame(() => {
+      this._raf = 0; this.table.style.transform = `translate(${this.x}px, ${this.y}px) scale(${this.s})`; this.onChange?.(this);
+      if (!this.table.classList.contains('moving')) this.table.classList.add('moving');
+      clearTimeout(this._idle); this._idle = setTimeout(() => this.table.classList.remove('moving'), 160);
+    });
   }
   /** Encuadra un rectángulo de mesa en el área visible */
   frame(rect = this.bounds, { pad = 0.02, animate = true, zoomMax = 3 } = {}) {

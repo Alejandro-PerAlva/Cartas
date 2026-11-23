@@ -697,3 +697,8 @@ ul.rules { margin: 0; padding-left: 20px; font-size: 17px; line-height: 1.3; } u
   .sheet.settings .sw { width: 46px; height: 24px; } .sheet.settings .sw::after { width: 18px; height: 18px; } .sheet.settings .sw.on::after { transform: translateX(22px); }
   .sheet.settings .btnrow { margin-top: 6px; } .sheet.settings .btn { min-height: 32px; padding: 4px 14px; font-size: 12px; } .sheet.settings .close-x { width: 30px; height: 30px; right: 6px; top: 4px; }
 }
+
+/* ---- rendimiento: capa de la mesa promovida solo mientras se mueve; fichas sin filtros por pieza ---- */
+#table.moving { will-change: transform; }
+.chip { filter: none; }
+.chips { filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .55)); }

@@ -47,8 +47,8 @@ export class Table {
     this.table.append(this.surface, this.boardD, this.boardC, this.dmat, this.cmat, this.layerD, this.layerC);
     this.viewport.append(this.table, h('div#lightfx'));
     this.root.append(this.viewport);
-    // el suelo de madera acompaña a la cámara (un único tablón continuo, sin bordes de mesa)
-    this.cam = new Camera(this.viewport, this.table, { ...B.dungeon }, { safe: () => this.safeInsets(), onChange: (c) => { this.viewport.style.backgroundSize = `${1000 * c.s}px`; this.viewport.style.backgroundPosition = `${c.x}px ${c.y}px`; } });
+    // (el suelo de madera es fijo: repintarlo en cada fotograma del arrastre costaba fluidez en móvil)
+    this.cam = new Camera(this.viewport, this.table, { ...B.dungeon }, { safe: () => this.safeInsets() });
     this.cam.onResize = () => this.fit(false);
     this.cam.onUser = () => { this.userMoved = true; };       // solo cuenta si el jugador de verdad mueve o acerca la mesa (no un simple toque)
     this._panels();
