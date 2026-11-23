@@ -232,7 +232,7 @@ export class Menu {
         p.includes?.length ? h('p.col-note', `Incluye también: ${p.includes.map((id) => this.packs.find((x) => x.id === id)?.es || id).join(', ')}.`) : null,
         p.exclusive ? h('p.col-note', 'Sustituye al mazo de mazmorra original: no se puede combinar con otro mazo alternativo.') : null,
         key.length ? [h('h4', 'Cartas destacadas'), h('div.thumbs', ...key)] : null,
-        h('div.btnrow', toggle, base || p.id === 'anemia' ? h('button.btn', { onclick: () => { sound.tap(); el.remove(); this.showManual(base ? 'original' : 'anemia'); } }, 'MANUAL') : null),
+        h('div.btnrow', toggle, p.id === 'anemia' ? h('button.btn', { onclick: () => { sound.tap(); el.remove(); this.showManual('anemia'); } }, 'MANUAL') : null),
         h('button.close-x', { onclick: () => el.remove(), 'aria-label': 'Cerrar' }, icon('x', 18))));
     this.menuEl.append(el);
   }
