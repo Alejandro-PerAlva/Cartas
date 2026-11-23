@@ -226,9 +226,10 @@ export class Table {
     // tramas resueltas: escalonadas con los ojos a la vista
     this.slot('p_plots', 'd', [p.plotsPlayed.slice(-4), this.vs.stats.eyes], () => {
       const pl = p.plotsPlayed; if (!pl.length) return null;
-      const zone = L.ZONES.plotsUsed; const show = pl.slice(-4); const w = 168, hh = 236, step = 22;
-      const el = h('div.plots-played', { dataset: { nodrag: '1' }, style: { left: zone.x + (zone.w - w) / 2 + 'px', top: zone.y + zone.h - hh - 4 + 'px', width: w + 'px', height: hh + 'px', zIndex: 3 } });
-      show.forEach((u, i) => { const off = (show.length - 1 - i) * step; el.append(h('div.pcard', { style: { transform: `translate(${(i - 1.5) * 2}px, ${-off}px)` } }, h('img', { src: cardPath(g.img(u)) }))); });
+      const r = cardRect('plotsUsed', CARD_D); const show = pl.slice(-4);
+      const el = h('div.plots-played', { dataset: { nodrag: '1' }, style: { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px', zIndex: 3 } });
+      // la última trama queda exactamente en la casilla; las anteriores asoman por detrás como en el resto de montones
+      show.forEach((u, i) => { const k = show.length - 1 - i; el.append(h('div.pcard', { style: { transform: `translate(${k * 2}px, ${k * 2.6}px) rotate(${k ? ((u * 37) % 5) - 2 : 0}deg)` } }, h('img', { src: cardPath(g.img(u)) }))); });
       el.append(h('div.count.eyes', `👁 ${this.vs.stats.eyes}`));
       el.addEventListener('click', (e) => { if (this.cam.wasDrag()) return; e.stopPropagation(); this.app.onZoneTap('plotsUsed', e); });
       return el;
@@ -278,7 +279,7 @@ export class Table {
     this.slot('c_skills', 'c', v.skills.map((s) => s.id), () => {
       const list = v.skills; if (!list.length) return null;
       const zn = L.ZONES.c_skills; const n = list.length;
-      const step = n > 1 ? Math.min(46, Math.max(10, (zn.h - CARD_C.h) / (n - 1))) : 0;
+      const step = n > 1 ? Math.min(46, Math.max(5, (zn.h - CARD_C.h) / (n - 1))) : 0;
       const total = CARD_C.h + (n - 1) * step; const y0 = Math.round((zn.h - total) / 2);
       const box = h('div', { style: { position: 'absolute', left: zn.x + 'px', top: zn.y + 'px', width: zn.w + 'px', height: zn.h + 'px', zIndex: 4 } });
       list.forEach((sk, i) => {
@@ -295,7 +296,7 @@ export class Table {
     this.slot('c_acc', 'c', [eq.AC, v.canEquip, dragOk], () => {
       const list = eq.AC; if (!list.length) return null;
       const zn = L.ZONES.c_acc; const n = list.length;
-      const step = n > 1 ? Math.min(56, Math.max(14, (zn.h - CARD_C.h) / (n - 1))) : 0;
+      const step = n > 1 ? Math.min(56, Math.max(5, (zn.h - CARD_C.h) / (n - 1))) : 0;
       const y0 = Math.round((zn.h - (CARD_C.h + (n - 1) * step)) / 2);
       const box = h('div', { style: { position: 'absolute', left: zn.x + 'px', top: zn.y + 'px', width: zn.w + 'px', height: zn.h + 'px', zIndex: 4 } });
       list.forEach((u, i) => {

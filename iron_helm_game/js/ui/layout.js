@@ -22,7 +22,7 @@ const D = {
   trappings: [1495, 55, 1700, 340], skills: [1735, 55, 1940, 340],
   map: [1495, 375, 1700, 660], morality: [1735, 375, 1940, 660],
   // las 4 puertas verdes (la puerta decorada de la izquierda no se usa): descarte · mazo (la más iluminada) · las dos cartas del turno, hacia la derecha
-  ddiscard: [530, 810, 740, 1090], dungeon: [775, 810, 980, 1090], door1: [1015, 810, 1220, 1090], door2: [1255, 810, 1460, 1090],
+  ddiscard: [530, 801, 740, 1081], dungeon: [775, 801, 980, 1081], door1: [1015, 801, 1220, 1081], door2: [1255, 801, 1460, 1081],
   rubble: [1580, 735, 1900, 1100],
 };
 /** Huecos del tapete de personaje (coordenadas originales 1199×1900) */
