@@ -1,0 +1,18 @@
+# Archivos de gran tamaño y temporales (no aptos para git / límite 100MB de GitHub)
+*.zip
+17. Iron Helm (1).zip
+assets_extracted/
+temp_inspect/
+
+# Scripts de prueba temporales
+test_*.js
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
