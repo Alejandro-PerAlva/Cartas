@@ -43,7 +43,7 @@ export class Director {
   deckZoneOf(def) {
     if (def.kind === 'item') return def.deck === 'potion' ? 'potions' : def.deck === 'trapping' ? 'trappings' : 'loot';
     if (def.kind === 'enemy') return def.inLootDeck ? 'loot' : 'enemies';
-    return { plot: 'plots', boss: 'rubble', skill: 'skills' }[def.kind] || 'dungeon';
+    return { plot: 'plots', boss: 'door4', skill: 'skills' }[def.kind] || 'dungeon';
   }
   discardZoneOf(def) {
     if (def.isDungeon) return 'door3';
@@ -231,7 +231,7 @@ export class Director {
     if (this.spot) await this.dismissSpot(this.spotZone());
     sound.deal();
     const zone = info?.zone || this.deckZoneOf(def);
-    const from = info?.from || T.screenRect(zone === 'rubble' ? 'enemies' : zone);
+    const from = info?.from || T.screenRect(zone === 'door4' ? 'enemies' : zone);
     gh = new Ghost({ front: g.img(ev.uid), back: backOf(def), rect: from, z: 160 });
     await gh.fly(this.showRect(), { ms: this.k(560), flip: true, arc: 40 });
     const what = def.kind === 'artifact' || def.deck === 'artifact' ? 'Artefacto' : def.deck === 'potion' ? 'Poción' : def.deck === 'trapping' ? 'Equipo' : 'Botín';
@@ -355,7 +355,7 @@ export class Director {
   async on_boss(ev) {
     const g = this.g; const def = g.def(ev.uid); this.clearSpot();
     sound.gong(); vignette('gold');
-    const gh = new Ghost({ front: g.img(ev.uid), back: backOf(def), rect: this.T.screenRect('rubble'), z: 150 });
+    const gh = new Ghost({ front: g.img(ev.uid), back: backOf(def), rect: this.T.screenRect('door4'), z: 150 });
     await gh.fly(this.spotRect(), { ms: this.k(900), flip: true, arc: 60 });
     await this.hold({ lines: [`¡${def.name} despierta!`], cue: 'Toca para enfrentarte a él' }); gh.remove();
   }
@@ -393,7 +393,7 @@ export class Director {
     if (ev.kind === 'morale') { sound.token(); this.note(`${def.name}: moral ${ev.morale}.`); await this.wait(250); return; }
     if (ev.kind === 'leave' && this.app.overlays.userKind !== 'shop') {
       sound.poison();
-      const gh = new Ghost({ front: g.img(ev.uid), back: backOf(def), rect: this.T.screenRect(L.ZONES.side ? 'c_hero' : 'enemies'), z: 160 });
+      const gh = new Ghost({ front: g.img(ev.uid), back: backOf(def), rect: this.T.screenRect('c_hero'), z: 160 });
       await gh.fly(this.showRect(0.8), { ms: this.k(520), flip: true, arc: 30 });
       await this.hold({ lines: [`${def.name} te abandona: su moral se ha agotado.`] }); gh.remove();
     }

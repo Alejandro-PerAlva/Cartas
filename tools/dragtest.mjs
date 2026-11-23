@@ -39,7 +39,7 @@ if (!cdp) { // soltar: arma → cubo
 const mb3 = await mainCard.boundingBox(); const before = (await state()).items;
 await p.mouse.move(mb3.x + mb3.width / 2, mb3.y + mb3.height / 2); await p.mouse.down();
 for (let i = 1; i <= 10; i++) await p.mouse.move(mb3.x + mb3.width / 2 + i * 8, mb3.y + mb3.height / 2 - i * 12);
-await s.shot("drag-3-bin"); console.log(out.join("\n")); const bin = await p.locator("#dragbin").boundingBox({ timeout: 2000 });
+await s.shot("drag-3-bin"); console.log(out.join("\n")); const bin = await p.locator(await p.locator("#dragbin").count() ? "#dragbin" : ".trash").boundingBox({ timeout: 2000 });   // en el tablero de personaje se suelta sobre la reja (.trash)
 await p.mouse.move(bin.x + bin.width / 2, bin.y + bin.height / 2, { steps: 6 }); await p.waitForTimeout(150); await p.mouse.up(); await p.waitForTimeout(900);
 st = await state(); ok('soltar en el cubo descarta el objeto', st.items === before - 1, JSON.stringify(st));
 }

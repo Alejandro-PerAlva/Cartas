@@ -236,7 +236,8 @@ export class App {
       case 'plotsUsed': if (g.s.z.plotsPlayed.length) this.openJournal('plots'); break;
       case 'lootUsed': this.overlays.showPile('Botín descartado', 'Las cartas de botín que ya has usado o descartado (la última, arriba).', g.s.z.lootDiscard); break;
       case 'potionsUsed': this.overlays.showPile('Pociones usadas', 'Las pociones que ya has bebido o lanzado (la última, arriba).', g.s.z.potionsDiscard); break;
-      case 'door3': this.overlays.showPile('Descarte de la mazmorra', 'Las cartas de mazmorra que ya se han resuelto o descartado este nivel (la última, arriba).', g.s.z.dungeonDiscard); break;
+      case 'door3': this.overlays.showPile('Descarte de la mazmorra', 'Las cartas de mazmorra de este nivel (la última, arriba). Las que descartaste sin mirar siguen boca abajo.', g.s.z.dungeonDiscard, { hidden: (u) => !(g.s.seen || []).includes(u) }); break;
+      case 'door4': this.toast(`Mazo de jefes finales: ${g.s.z.bosses?.length ?? 0} cartas. El jefe se decide al terminar la aventura.`); break;
       case 'enemies': this.toast(`Mazo de enemigos: ${g.s.z.enemies.length} cartas.`); break;
       case 'loot': this.toast(`Mazo de botín: ${g.s.z.loot.length} cartas.`); break;
       case 'potions': this.toast(`Mazo de pociones: ${g.s.z.potions.length} cartas.`); break;

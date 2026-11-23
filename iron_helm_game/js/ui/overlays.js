@@ -99,10 +99,10 @@ export class Overlays {
 
   /* ----------------------------------------------------------------- pilas de descarte */
   /** muestra las cartas de una pila (solo ver: tocar una la abre en grande) */
-  showPile(title, sub, uids) {
+  showPile(title, sub, uids, { hidden = null } = {}) {
     if (!uids.length) return;
     const g = this.g; const n = uids.length; const cw = n <= 2 ? 'min(34vw, 46vh)' : n <= 4 ? 'min(22vw, 40vh)' : n <= 8 ? 'min(15vw, 30vh)' : n <= 18 ? 'min(11vw, 24vh)' : 'min(8.5vw, 19vh)';
-    const row = h('div.pickrow', { style: `--pcw:${cw}` }, ...uids.slice().reverse().map((uid) => h('div.pc', { dataset: { uid }, onclick: () => { sound.tap(); this.inspect({ uid }); } }, this.faceCard(uid))));
+    const row = h('div.pickrow', { style: `--pcw:${cw}` }, ...uids.slice().reverse().map((uid) => h('div.pc', { dataset: { uid }, onclick: () => { sound.tap(); if (!hidden?.(uid)) this.inspect({ uid }); } }, hidden?.(uid) ? cardEl({ front: backOf(g.def(uid)), back: backOf(g.def(uid)), up: false }) : this.faceCard(uid))));
     const el = h('div.modal', h('div.veil.mid', { onclick: () => this.clearUser() }), h('div.pick-head', h('div.pick-title', title), h('div.pick-sub', sub)), h('div.pickwrap', row),
       h('div.pick-foot', h('button.btn', { onclick: () => { sound.click(); this.clearUser(); } }, 'CERRAR')));
     this.mountUser(el, 'pile'); void g;

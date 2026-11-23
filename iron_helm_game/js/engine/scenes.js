@@ -27,7 +27,7 @@ Object.assign(Game.prototype, {
   /* ============================================================================ niveles */
   startLevel() {
     const s = this.s; const z = s.z;
-    s.turn = 0; s.lvl = {}; s.ctx = {};
+    s.turn = 0; s.lvl = {}; s.ctx = {}; s.seen = [];
     z.dungeon = this.rng.shuffle([...z.dungeon, ...z.dungeonDiscard.splice(0), ...z.pair.filter(Boolean)]);
     z.pair = [null, null];
     if (s.game.skipNext) {

@@ -53,7 +53,8 @@ export class Drag {
       this.t.layerC.append(el); return el;
     });
     // cubo de descarte en pantalla (siempre al alcance, sea cual sea el encuadre)
-    const bin = h('div#dragbin', h('b', '✕ SOLTAR'), h('small', 'descartar el objeto')); document.body.append(bin);
+    // en el tablero de personaje se suelta sobre la reja del tapete; en el de mazmorra, sobre un cubo flotante
+    const bin = h('div#dragbin', h('b', '✕ SOLTAR'), h('small', 'descartar el objeto')); if (this.t.tab !== 'char') document.body.append(bin);
     const tray = this.app.tray; let keep = null;
     if (targets.includes('tray')) { if (tray.isOpen) tray.el.classList.add('drop-ready'); else { keep = h('div#dragkeep', h('b', 'GUARDAR'), h('small', 'en la mochila')); document.body.append(keep); } }
     this.st = { ...p, ghost, targets, hints, bin, keep, offX: p.x - r.left, offY: p.y - r.top, w: r.width * 1.06, h: r.height * 1.06, origin: r, over: null };
@@ -94,7 +95,7 @@ export class Drag {
     // punto de pantalla del destino (antes de retirar los avisos)
     let a = null;
     if (over === 'tray') { const R = s.keep ? s.keep.getBoundingClientRect() : this.app.tray.rect(); a = { x: R.left + R.width / 2, y: R.top + R.height / 2 }; }
-    else if (over === 'trash') { const R = s.bin.getBoundingClientRect(); a = { x: R.left + R.width / 2, y: R.top + R.height / 2 }; }
+    else if (over === 'trash') { if (s.bin.isConnected) { const R = s.bin.getBoundingClientRect(); a = { x: R.left + R.width / 2, y: R.top + R.height / 2 }; } else { const Z = L.ZONES.trash; a = this.t.cam.toScreen(Z.x + Z.w / 2, Z.y + Z.h / 2); } }
     else if (over) { const R = L.ZONES[over]; a = this.t.cam.toScreen(R.x + R.w / 2, R.y + R.h / 2); }
     s.hints.forEach((el) => el.remove()); s.bin.remove(); s.keep?.remove(); this.t.trashEl.classList.remove('over'); this.app.tray.setDrop(false); this.app.tray.el.classList.remove('drop-ready');
     s.el.dataset.dragged = '1'; setTimeout(() => delete s.el.dataset.dragged, 160);

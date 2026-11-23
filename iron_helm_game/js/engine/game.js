@@ -154,6 +154,7 @@ export class Game {
   /* ============================================================================ eventos y utilidades */
   on(fn) { this.listeners.push(fn); return () => { this.listeners = this.listeners.filter((f) => f !== fn); }; }
   emit(t, data = {}) {
+    if (t === 'reveal' && data.uid != null) { const seen = (this.s.seen ||= []); if (!seen.includes(data.uid)) seen.push(data.uid); }   // cartas que el jugador ha visto (el descarte oculta las demás)
     const ev = { t, ...data };
     for (const fn of this.listeners) fn(ev, this);
   }

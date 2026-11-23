@@ -31,7 +31,7 @@ export class Table {
   /* ================================================================ construcción */
   _build() {
     const ex = this.cat?.extras; const extras = !!ex && Object.values(ex).some(Boolean);
-    configureLayout({ extras });
+    configureLayout({ extras, side: !!(ex?.mercenaries || ex?.afflictions) });
     this.viewport = h('div#viewport');
     this.table = h('div#table', { style: { width: L.TABLE.w + 'px', height: L.TABLE.h + 'px' } });
     this.surface = h('div.surface');
@@ -66,8 +66,8 @@ export class Table {
     const Z = L.ZONES;
     const add = (layer, el) => { this.layers[layer].append(el); return el; };
     // lateral: ficha del aventurero, compañeros, aflicciones y papelera
-    this.sidePanel = add('c', h('div.panel.side', { style: this._rectStyle(Z.side) }, h('div.panel-title', 'AVENTURERO')));
-    this.trashEl = add('c', h('div.trash', { style: this._rectStyle(Z.trash), dataset: { drop: 'trash' } }, h('span', '✕'), h('b', 'SOLTAR AQUÍ'), h('small', 'arrastra un objeto para descartarlo')));
+    if (Z.side) this.sidePanel = add('c', h('div.panel.side', { style: this._rectStyle(Z.side) }, h('div.panel-title', 'COMPAÑEROS')));
+    this.trashEl = add('c', h('div.trash', { style: this._rectStyle(Z.trash), dataset: { drop: 'trash' } }, h('span', '✕'), h('b', 'SOLTAR AQUÍ'), h('small', 'descartar el objeto')));
     // franja de expansiones
     if (L.extras) {
       this.stripPanel = add('d', h('div.panel.strip', { style: this._rectStyle(Z.strip) }, h('div.panel-title', 'EXPANSIONES')));
@@ -98,7 +98,6 @@ export class Table {
     this.pawnLevel = h('div.pawn'); this.pawnMoral = h('div.pawn.blue');
     this.layerD.append(this.pawnLevel, this.pawnMoral);
     this.eyesBadge = h('div.eyes-badge'); this.layerD.append(this.eyesBadge);
-    this.plaque = h('div.plaque-turn', { style: this._rectStyle(Z.door4) }); this.layerD.append(this.plaque);
   }
 
   /* ================================================================ pestañas y cámara */
@@ -175,7 +174,7 @@ export class Table {
   /* ================================================================ renderizado */
   render() {
     if (!this.vs) return;
-    this._decks(); this._piles(); this._doors(); this._char(); this._side(); this._tokens(); this._trackers(); this._plaque(); this._imp(); this._extras(); this._applyCue(); this._live();
+    this._decks(); this._piles(); this._doors(); this._char(); this._side(); this._tokens(); this._trackers(); this._imp(); this._extras(); this._applyCue(); this._live();
   }
 
   /** Mazo: pila de dorsos con grosor y contador */
@@ -204,41 +203,27 @@ export class Table {
     this._deck('d_plots', 'plots', c.plots, b('plots'));
     this._deck('d_trappings', 'trappings', c.trappings, b('trappings'), { empty: 'Equipo agotado' });
     this._deck('d_skills', 'skills', c.skills, b('skills'), { badge: learn });
-    // jefes: pila bajo los escombros
-    this.slot('d_bosses', 'd', [c.bosses], () => {
-      if (!(c.bosses > 0 && this.cat.pools.bosses.length)) return null;
-      const bc = center(L.ZONES.rubble); const r = { x: bc.x - 150, y: bc.y - 100, w: 150, h: 211 };
-      const el = h('div.deck.boss', { dataset: { nodrag: '1' }, style: { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px', zIndex: 3, transform: 'rotate(-6deg)' } },
-        h('div.stack', { style: { backgroundImage: `url(${b('bosses')})`, boxShadow: '3px 4px 0 #2a2018, 6px 8px 0 #e8dcc0, 9px 12px 12px rgba(0,0,0,.7)', filter: 'brightness(.7)' } }));
-      el.addEventListener('click', () => this.app.toast('El jefe final duerme tras los escombros… por ahora.'));
-      return el;
-    });
+    // jefes finales: el mazo, boca abajo, en el cuarto hueco de puertas
+    if (c.bosses > 0 && this.cat.pools.bosses.length) this._deck('d_bosses', 'door4', c.bosses, b('bosses'));
+    else this.slot('d_bosses', 'd', [0], () => null);
   }
 
   /** Pilas de descarte, cementerio y tramas resueltas */
   _piles() {
     const p = this.vs.piles; const g = this.game;
-    const topPile = (key, zone, list, faceDown = false) => this.slot(key, 'd', [list.length, list[list.length - 1], faceDown], () => {
+    const topPile = (key, zone, list, faceDown = false, dim = false) => this.slot(key, 'd', [list.length, list[list.length - 1], faceDown, dim], () => {
       if (!list.length) return null;
       const uid = list[list.length - 1]; const r = cardRect(zone, CARD_D); const d = g.def(uid);
       const el = h('div.pile', { dataset: { nodrag: '1' }, style: { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px', zIndex: 3 } });
       const n = Math.min(5, Math.ceil(list.length / 2)); const sh = [];
       for (let i = 1; i <= n; i++) sh.push(`${i}px ${i * 1.4}px 0 ${i % 2 ? '#e8dcc0' : '#2a2018'}`); sh.push('3px 8px 14px rgba(0,0,0,.6)');
-      el.append(h('div.stack', { style: { backgroundImage: `url(${faceDown ? backOf(d) : cardPath(g.img(uid))})`, boxShadow: sh.join(','), transform: `rotate(${((uid * 37) % 7) - 3}deg)` } }), h('div.count', String(list.length)));
+      el.append(h('div.stack', { style: { backgroundImage: `url(${faceDown ? backOf(d) : cardPath(g.img(uid))})`, boxShadow: sh.join(','), transform: `rotate(${((uid * 37) % 7) - 3}deg)`, filter: dim ? 'brightness(.55)' : '' } }), h('div.count', String(list.length)));
       el.addEventListener('click', (e) => { if (this.cam.wasDrag()) return; e.stopPropagation(); this.app.onZoneTap(zone, e); });
       return el;
     });
     topPile('p_loot', 'lootUsed', p.lootUsed); topPile('p_potions', 'potionsUsed', p.potionsUsed); topPile('p_dd', 'door3', p.dungeonDiscard, true);
-    // cementerio: abanico de enemigos derrotados (los gastados en habilidades, oscurecidos)
-    this.slot('p_grave', 'd', p.graveyard.map((e) => [e.uid, e.spent]), () => {
-      const gv = p.graveyard; if (!gv.length) return null;
-      const zone = L.ZONES.graveyard; const el = h('div.grave', { dataset: { nodrag: '1' }, style: { left: zone.x + 'px', top: zone.y + 'px', width: zone.w + 'px', height: zone.h + 'px', zIndex: 3 } });
-      const show = gv.slice(-4); const step = Math.min(34, (zone.w - 150) / Math.max(1, show.length - 1));
-      show.forEach((e, i) => el.append(h('div.gcard' + (e.spent ? '.spent' : ''), { style: { left: i * step + 'px', top: 36 + i * 4 + 'px', transform: `rotate(${(i - 1.5) * 3}deg)` } }, h('img', { src: cardPath(g.img(e.uid)) }))));
-      el.append(h('div.count', { style: { right: '4px', bottom: '2px' } }, String(gv.length)));
-      el.addEventListener('click', (e) => { if (this.cam.wasDrag()) return; e.stopPropagation(); this.app.onZoneTap('graveyard', e); });
-      return el;
-    });
+    // cementerio: pila de enemigos derrotados, igual que las de objetos y pociones (la carta de arriba se oscurece si ya se gastó en una habilidad)
+    topPile('p_grave', 'graveyard', p.graveyard.map((e) => e.uid), false, !!p.graveyard[p.graveyard.length - 1]?.spent);
     // tramas resueltas: escalonadas con los ojos a la vista
     this.slot('p_plots', 'd', [p.plotsPlayed.slice(-4), this.vs.stats.eyes], () => {
       const pl = p.plotsPlayed; if (!pl.length) return null;
@@ -325,17 +310,9 @@ export class Table {
 
   /** Panel lateral: ficha del aventurero y, si hay expansión, compañeros y aflicciones */
   _side() {
+    if (!L.ZONES.side) return;
     const v = this.vs; const g = this.game; const S = L.ZONES.side; const s = v.stats; const Zm = L.ZONES.mercs, Za = L.ZONES.afflictions;
-    const prof = { agilidad: 'Agilidad', mente: 'Mente', fuerza: 'Fuerza' }[g.s.hero.proficiency] || '';
     this.trashEl.classList.toggle('on', v.canEquip);
-    this.slot('side_info', 'c', [s.morality, s.eyes, s.level, g.s.stats.kills, g.s.stats.turns, g.s.hero.name, g.s.hero.divinidad, s.weight, s.maxWeight, v.invCount], () => {
-      const over = s.weight > s.maxWeight;
-      const box = h('div.side-info', { style: { left: S.x + 'px', top: S.y + 66 + 'px', width: S.w + 'px', zIndex: 4 } },
-        h('div.hero-name', g.s.hero.name), h('div.hero-prof', `Competencia: ${prof}`),
-        h('dl', h('dt', 'Nivel'), h('dd', `${s.level} / 5`), h('dt', 'Moral'), h('dd', `${s.morality > 0 ? '+' : ''}${s.morality}`), h('dt', 'Ojos'), h('dd', `${s.eyes} / 10`),
-          h('dt', 'Enemigos'), h('dd', String(g.s.stats.kills)), h('dt', 'Turnos'), h('dd', String(g.s.stats.turns || 0)), h('dt', 'Carga'), h('dd' + (over ? '.over' : ''), g.s.hero.carryRule === 'weaponsOnly' ? 'Solo armas' : `${s.weight} / ${s.maxWeight}`)));
-      return box;
-    });
     const sub = (txt, y) => h('div.side-sub', { style: { left: S.x + 'px', top: y + 'px', width: S.w + 'px' } }, txt);
     const mercs = v.mercs || []; const afs = v.afflictions || [];
     this.slot('side_mercs', 'c', [mercs.map((m) => [m.uid, m.morale, m.max])], () => {
@@ -410,13 +387,6 @@ export class Table {
       const r = L.ZONES[z]; const svg = '<svg viewBox="0 0 64 64" width="100%" height="100%"><path d="M12 22 L6 4 L24 14 Z M52 22 L58 4 L40 14 Z" fill="#7a1b11" stroke="#1b0603" stroke-width="2"/><circle cx="32" cy="36" r="22" fill="#c0301c" stroke="#1b0603" stroke-width="2.5"/><ellipse cx="23" cy="32" rx="4.5" ry="5.5" fill="#ffe9a8"/><ellipse cx="41" cy="32" rx="4.5" ry="5.5" fill="#ffe9a8"/><circle cx="23.5" cy="33" r="2" fill="#1b0603"/><circle cx="40.5" cy="33" r="2" fill="#1b0603"/><path d="M20 46 Q32 56 44 46" fill="none" stroke="#1b0603" stroke-width="3" stroke-linecap="round"/><path d="M27 48 L29 53 L31 48 M33 48 L35 53 L37 48" fill="#fff" stroke="none"/></svg>';
       return h('div.imp', { title: 'El Diablillo', style: { left: r.x - 14 + 'px', top: r.y - 22 + 'px' }, html: svg });
     });
-  }
-
-  /** Placa del turno (puerta 4) */
-  _plaque() {
-    const s = this.vs.stats; if (this._plq === `${s.turn}|${s.level}`) return; this._plq = `${s.turn}|${s.level}`;
-    const pips = []; for (let i = 1; i <= 8; i++) pips.push(`<i class="${i <= s.turn ? 'on' : ''}"></i>`);
-    this.plaque.innerHTML = `<div class="plq"><div class="k">NIVEL</div><div class="n">${s.level}</div><div class="k">TURNO ${Math.min(8, Math.max(0, s.turn))} / 8</div><div class="pips">${pips.join('')}</div></div>`;
   }
 
   /** Franja de expansiones: entorno, artefactos, aflicciones y mapa de encuentros */

@@ -37,10 +37,11 @@ const CW = { gold: [88, 88], poison: [236, 88], ration: [406, 90], blessing: [59
 
 export const L = { ZONES: {}, WELLS: {}, CWELLS: {}, BOARDS: {}, FOCUS: {}, TABLE: { w: 0, h: 0 }, DMAT: null, CMAT: null, SIDE: null, EXTRAS: null };
 
-export function configureLayout({ extras = false } = {}) {
+export function configureLayout({ extras = false, side: withSide = false } = {}) {
   const extraW = extras ? 300 : 0;
   const dungeon = { x: 0, y: 0, w: 2110 + extraW, h: BOARD_H };
-  const char = { x: dungeon.w + 260, y: 0, w: 1300, h: BOARD_H };
+  const cmatW0 = Math.round(1199 * CS);
+  const char = { x: dungeon.w + 260, y: 0, w: withSide ? 1300 : cmatW0 + 100, h: BOARD_H };
   const dmat = { x: dungeon.x + 60, y: 50, w: 2000, h: 1175, img: 'assets/mats/iron_helm_mat_web.jpg' };
   const cmatW = Math.round(1199 * CS);
   const cmat = { x: char.x + 50, y: 50, w: cmatW, h: 1175, img: 'assets/mats/personaje_mat_web.jpg' };
@@ -51,12 +52,16 @@ export function configureLayout({ extras = false } = {}) {
   for (const [k, v] of Object.entries(D)) ZONES[k] = { ...rect(dmat, ...v, K), mat: 'd' };
   for (const [k, v] of Object.entries(C)) ZONES['c_' + k] = { ...rect(cmat, ...v, CS), mat: 'c' };
 
-  // panel lateral derecho (ficha del aventurero, compañeros, aflicciones y papelera)
-  const side = { x: cmat.x + cmat.w + 36, y: 50, w: char.x + char.w - (cmat.x + cmat.w + 36) - 50, h: 1175 };
-  ZONES.side = { ...side, mat: 'c' };
-  ZONES.mercs = { x: side.x + 20, y: side.y + 478, w: side.w - 40, h: 330, mat: 'c' };
-  ZONES.afflictions = { x: side.x + 20, y: side.y + 836, w: side.w - 40, h: 190, mat: 'c' };
-  ZONES.trash = { x: side.x + 28, y: side.y + side.h - 150, w: side.w - 56, h: 112, mat: 'c' };
+  // panel lateral derecho: solo si hay esbirros o aflicciones que mostrar (expansiones); la ficha del aventurero ya está en la barra superior
+  let side = null;
+  if (withSide) {
+    side = { x: cmat.x + cmat.w + 36, y: 50, w: char.x + char.w - (cmat.x + cmat.w + 36) - 50, h: 1175 };
+    ZONES.side = { ...side, mat: 'c' };
+    ZONES.mercs = { x: side.x + 20, y: side.y + 96, w: side.w - 40, h: 330, mat: 'c' };
+    ZONES.afflictions = { x: side.x + 20, y: side.y + 500, w: side.w - 40, h: 190, mat: 'c' };
+  }
+  // zona de soltar objetos: la reja de hierro del tapete de personaje (aparece solo mientras se arrastra un objeto)
+  ZONES.trash = { ...rect(cmat, 596, 1196, 978, 1604, CS), mat: 'c' };
 
   // franja de expansiones (tablero de mazmorra)
   const strip = { x: dmat.x + dmat.w + 40, y: 50, w: extraW - 40 - 20, h: 1175 };

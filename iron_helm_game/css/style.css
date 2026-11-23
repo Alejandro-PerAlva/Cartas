@@ -76,9 +76,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .panel-title { position: absolute; left: 0; right: 0; top: 24px; text-align: center; font: 800 30px var(--font-title); letter-spacing: .26em; color: #d9b25e; text-shadow: 0 2px 0 #000, 0 0 14px rgba(0, 0, 0, .8); pointer-events: none; }
 .panel-sub { position: absolute; left: 0; right: 0; top: 68px; text-align: center; font: italic 500 24px var(--font-body); color: #cdb58a; pointer-events: none; }
 .panel-sub.over { color: #ff8a78; }
-.trash { position: absolute; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 3px dashed rgba(190, 80, 60, .5); border-radius: 14px; color: #d58a7a;
-  background: rgba(60, 10, 6, .35); opacity: .35; transition: opacity .2s; pointer-events: none; }
-.trash.on { opacity: .85; }
+.trash { position: absolute; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 4px dashed rgba(220, 110, 90, .85); border-radius: 18px; color: #ffd0c4; text-align: center;
+  background: rgba(50, 8, 4, .62); opacity: 0; transform: scale(.96); transition: opacity .18s, transform .18s; pointer-events: none; }
+body.dragging .trash { opacity: .95; transform: none; }
 .trash span { font-size: 28px; line-height: 1; } .trash b { font: 800 20px var(--font-title); letter-spacing: .18em; } .trash small { font: italic 500 17px var(--font-body); opacity: .8; }
 .pack-empty { position: absolute; z-index: 4; text-align: center; font: 700 28px var(--font-title); color: rgba(220, 190, 140, .6); pointer-events: none; }
 .pack-empty small { display: block; margin-top: 10px; font: italic 500 21px var(--font-body); color: rgba(205, 181, 138, .6); letter-spacing: 0; }
