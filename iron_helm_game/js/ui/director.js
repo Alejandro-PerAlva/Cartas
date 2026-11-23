@@ -295,7 +295,7 @@ export class Director {
     const el = this.arena.heroChips; const idx = { hp: 0, energy: 1, poison: 2, blessing: 3, gold: 4, rations: 5 }[stat] ?? 0; const kid = el.children[idx];
     const r = (kid || el).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
   }
-  async on_eyes(ev) { this.vs.stats.eyes = ev.eyes; this.T.render(); sound.eye(); vignette(); const e = this.T.eyesBadge; e.classList.add('pop'); await this.wait(500); e.classList.remove('pop'); this.app.updateHud(); }
+  async on_eyes(ev) { this.vs.stats.eyes = ev.eyes; this.T.render(); sound.eye(); vignette(); await this.wait(500); this.app.updateHud(); }
 
   /* ---- trama ---- */
   async on_plot(ev) {

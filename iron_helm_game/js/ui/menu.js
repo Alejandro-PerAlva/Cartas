@@ -119,7 +119,7 @@ export class Menu {
   }
   showVariantInfo(v) {
     const el = h('div.modal', h('div.veil', { onclick: () => el.remove() }), h('div.sheet.scroll.wide', h('h2', v.name), v.blurb ? h('p.narr', v.blurb) : null,
-      h('ul.rules', ...(v.rules || []).map((r) => h('li', r))), h('div.btnrow', h('button.btn.primary', { onclick: () => el.remove() }, 'ENTENDIDO')), h('button.close-x', { onclick: () => el.remove(), 'aria-label': 'Cerrar' }, icon('x', 18))));
+      h('ul.rules', ...(v.rules || []).map((r) => h('li', r))), h('button.close-x', { onclick: () => el.remove(), 'aria-label': 'Cerrar' }, icon('x', 18))));
     this.menuEl.append(el);
   }
   sub(p) {
@@ -216,7 +216,7 @@ export class Menu {
         p.includes?.length ? h('p.col-note', `Incluye también: ${p.includes.map((id) => this.packs.find((x) => x.id === id)?.es || id).join(', ')}.`) : null,
         p.exclusive ? h('p.col-note', 'Sustituye al mazo de mazmorra original: no se puede combinar con otro mazo alternativo.') : null,
         key.length ? [h('h4', 'Cartas destacadas'), h('div.thumbs', ...key)] : null,
-        h('div.btnrow', toggle, p.id === 'anemia' ? h('button.btn', { onclick: () => { sound.tap(); el.remove(); this.showManual('anemia'); } }, 'MANUAL') : null, h('button.btn.quiet', { onclick: () => el.remove() }, 'CERRAR')),
+        h('div.btnrow', toggle, p.id === 'anemia' ? h('button.btn', { onclick: () => { sound.tap(); el.remove(); this.showManual('anemia'); } }, 'MANUAL') : null),
         h('button.close-x', { onclick: () => el.remove(), 'aria-label': 'Cerrar' }, icon('x', 18))));
     this.menuEl.append(el);
   }
@@ -224,7 +224,6 @@ export class Menu {
   showManual(tab = 'original') {
     const el = h('div.modal', h('div.veil', { onclick: () => el.remove() }),
       h('div.sheet.scroll.wide.manual-sheet', h('h2', 'Manual de instrucciones'), manualBody({ tab }),
-        h('div.btnrow', h('button.btn.primary', { onclick: () => el.remove() }, 'CERRAR')),
         h('button.close-x', { onclick: () => el.remove(), 'aria-label': 'Cerrar' }, icon('x', 18))));
     this.menuEl.append(el);
   }

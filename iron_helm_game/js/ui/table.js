@@ -97,7 +97,6 @@ export class Table {
     // peones
     this.pawnLevel = h('div.pawn'); this.pawnMoral = h('div.pawn.blue');
     this.layerD.append(this.pawnLevel, this.pawnMoral);
-    this.eyesBadge = h('div.eyes-badge'); this.layerD.append(this.eyesBadge);
   }
 
   /* ================================================================ pestañas y cámara */
@@ -178,9 +177,9 @@ export class Table {
   }
 
   /** Mazo: pila de dorsos con grosor y contador */
-  _deck(key, zoneName, count, backSrc, { size = CARD_D, label = '', empty = '', badge = '', layer = 'd', cls = '' } = {}) {
+  _deck(key, zoneName, count, backSrc, { size = CARD_D, label = '', empty = '', badge = '', layer = 'd', cls = '', dy = 0 } = {}) {
     return this.slot(key, layer, [zoneName, count, backSrc, label, empty, badge], () => {
-      const r = cardRect(zoneName, size);
+      const r = cardRect(zoneName, size, 0, dy);
       const el = h('div.deck' + (cls ? '.' + cls : ''), { dataset: { deck: key, nodrag: '1' }, style: { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px', zIndex: 3 } });
       if (count > 0) {
         const layers = Math.min(7, Math.ceil(count / 2.2)); const shadows = [];
@@ -204,7 +203,7 @@ export class Table {
     this._deck('d_trappings', 'trappings', c.trappings, b('trappings'), { empty: 'Equipo agotado' });
     this._deck('d_skills', 'skills', c.skills, b('skills'), { badge: learn });
     // jefes finales: el mazo, boca abajo, en el cuarto hueco de puertas
-    if (c.bosses > 0 && this.cat.pools.bosses.length) this._deck('d_bosses', 'door4', c.bosses, b('bosses'));
+    if (c.bosses > 0 && this.cat.pools.bosses.length) this._deck('d_bosses', 'door4', c.bosses, b('bosses'), { dy: -10 });
     else this.slot('d_bosses', 'd', [0], () => null);
   }
 
@@ -375,8 +374,6 @@ export class Table {
     const place = (pawn, zone, spot) => { const r = L.ZONES[zone]; pawn.style.left = r.x + spot[0] * r.w + 'px'; pawn.style.top = r.y + spot[1] * r.h + 'px'; };
     place(this.pawnLevel, 'map', mapSpotsFor(cat)[Math.max(1, Math.min(5, s.level))] || [0.5, 0.5]);
     place(this.pawnMoral, 'morality', cat.moralitySpots[String(Math.max(-5, Math.min(5, Math.round(s.morality))))] || [0.5, 0.5]);
-    const mr = L.ZONES.morality; this.eyesBadge.textContent = `👁 ${s.eyes}/10`;
-    this.eyesBadge.style.left = mr.x + mr.w / 2 - 50 + 'px'; this.eyesBadge.style.top = mr.y + mr.h + 6 + 'px'; this.eyesBadge.classList.toggle('hot', s.eyes >= 8);
   }
 
   /** El Diablillo (variante de ANEMIA): se sienta sobre el mazo de botín, luego sobre el de pociones, y se marcha */
