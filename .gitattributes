@@ -1,0 +1,4 @@
+# Git LFS tracking for files > 100MB (GitHub file size limit is 100MB)
+"17. Iron Helm/01. Juego Base/02. Cartas/Juego Base.pdf" filter=lfs diff=lfs merge=lfs -text
+"17. Iron Helm/02. Expansiones/15. Gnome Pack #1 + Promo Underquest/Gnome Pack #1.pdf" filter=lfs diff=lfs merge=lfs -text
+"17. Iron Helm/03. Expansión Fanmade -Anemia-/02. Cartas/Anemia 4.0.pdf" filter=lfs diff=lfs merge=lfs -text
