@@ -63,7 +63,7 @@ export class Menu {
 
   /* ================================================================ aventura y expansiones */
   buildAdventure() {
-    const camps = this.packs.filter((p) => p.type === 'campaign'); const mods = this.packs.filter((p) => p.type === 'module'); const modes = this.packs.filter((p) => p.type === 'mode');
+    const camps = this.packs.filter((p) => p.type === 'campaign'); const mods = this.packs.filter((p) => p.type === 'module' || p.type === 'mode');
     const row = (p, kind) => {
       const el = h('div.opt.' + kind, { dataset: { id: p?.id || 'base' } },
         h('div.opt-mark'),
@@ -77,10 +77,9 @@ export class Menu {
       h('div.opts', row(null, 'radio'), ...camps.map((p) => row(p, 'radio'))),
       h('h2', 'Expansiones modulares'), h('p.col-hint', 'Se pueden combinar con cualquier aventura. La mayoría aumenta la dificultad.'),
       h('div.opts', ...mods.map((p) => row(p, 'check'))),
-      modes.length ? [h('h2', 'Modos fanmade'), h('p.col-hint', 'Contenido no oficial hecho por la comunidad. Se combina con cualquier aventura.'), h('div.opts', ...modes.map((p) => row(p, 'check')))] : null,
       this.variants.length ? [h('h2', 'Reglas variantes'), h('p.col-hint', 'Opcionales y independientes: actívalas a tu gusto para cambiar el reto o el tono de la partida.'), this.variantsBox = h('div.opts')] : null,
       this.info.missing?.length ? h('p.col-note', `Sin cartas en el repositorio todavía: ${this.info.missing.join(', ')}.`) : null,
-      h('p.col-note', 'Juego en solitario de Jason Glover · Grey Gnome Games. Adaptación digital no oficial para uso personal.'));
+      null);
     this.renderVariants(); this.updateOpts();
   }
   /** reglas variantes: interruptores independientes (algunas necesitan un modo, un módulo, o excluyen a otra) */
@@ -121,7 +120,7 @@ export class Menu {
     this.menuEl.append(el);
   }
   sub(p) {
-    const bits = [p.type === 'campaign' ? `Campaña · nivel de aventura ${p.adventureLevel ?? '?'}` : p.type === 'mode' ? 'Modo fanmade' : 'Módulo'];
+    const bits = [p.type === 'campaign' ? `Campaña · nivel de aventura ${p.adventureLevel ?? '?'}` : 'Módulo'];
     if (p.name && p.name !== p.es) bits.push(p.name);
     return bits.join(' · ');
   }

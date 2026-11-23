@@ -1,5 +1,5 @@
 /**
- * IRON HELM · ANEMIA 4.0 (modo fanmade): mecánicas de las cartas (peligros, Mutante, esbirros, pociones, habilidades y tramas).
+ * IRON HELM · ANEMIA 4.0 (modo): mecánicas de las cartas (peligros, Mutante, esbirros, pociones, habilidades y tramas).
  *
  * El comportamiento declarativo está en js/data/pack-fx.js (POWERS, FX, ENV_FX, PLOT_OPS); aquí viven los casos que el
  * vocabulario no cubre. Las reglas variantes del libro están en variants.js.

@@ -1,10 +1,8 @@
 # Iron Helm Digital
 
-Adaptación digital en solitario de **Iron Helm** (Jason Glover · Grey Gnome Games) para navegador y móvil.
+Adaptación digital en solitario de **Iron Helm** para navegador y móvil.
 Una mesa de juego de fantasía oscura con los tapetes oficiales, cartas reales que se voltean, dados 3D que
 ruedan sobre el fieltro y todas las reglas del reglamento aplicadas por un motor probado con tests.
-
-> Proyecto personal y no oficial. Diseño original e ilustraciones © Jason Glover, Daniel F. Walthall y Grey Gnome Games.
 
 ## Jugar
 
@@ -61,7 +59,7 @@ The Lonely Troll Inn, The Fanny Pack, Beasts & Burdens, The Howling Abyss, Iron 
 Todos los datos están **transcritos de las cartas impresas** (`iron_helm_game/assets/cards`); la tabla de cobertura carta → efecto → test
 está en [`docs/EXPANSIONS.md`](docs/EXPANSIONS.md).
 
-**Modo fanmade ANEMIA 4.0** (Aizen Myo): 5 personajes, 8 jefes, 12 enemigos, 22 tramas, objetos, pociones, habilidades, aflicciones,
+**ANEMIA 4.0:** 5 personajes, 8 jefes, 12 enemigos, 22 tramas, objetos, pociones, habilidades, aflicciones,
 entornos y esbirros, más **15 reglas variantes** independientes que se activan en el menú (Diablillo, Pueblo de Origen, Motivación,
 Cero Energía, Gastar XP, Hogar Soñado, Sin Retorno, Justo Antes de Morir, Enfrentarse a La Parca, entornos temáticos, Muertes Atroces,
 Lugares de Retiro, Encantamientos, Momentos de Paz y la aventura Metal Inmortal). Algunas necesitan el modo, un módulo concreto o se excluyen entre sí;
@@ -103,5 +101,4 @@ tests/ · tools/
 - [`docs/EXPANSIONS.md`](docs/EXPANSIONS.md) — cómo añadir una expansión.
 
 ## Licencia y créditos
-Código de la adaptación: uso personal y educativo. Iron Helm © Grey Gnome Games; las ilustraciones y textos de
-las cartas pertenecen a sus autores. Fuentes tipográficas: Cinzel e IM Fell (SIL OFL 1.1).
+Código de la adaptación: uso personal y educativo. Fuentes tipográficas: Cinzel e IM Fell (SIL OFL 1.1).
