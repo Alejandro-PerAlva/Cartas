@@ -110,7 +110,7 @@ export class Table {
     if (small && !portrait) return L.FOCUS.charTop;
     return portrait || small ? L.FOCUS.charMat : L.FOCUS.char;
   }
-  fit(animate = true) { this.userMoved = false; return this.cam.frame(this.defaultFrame(), { animate, pad: 0.01 }); }
+  fit(animate = true) { this.userMoved = false; return this.cam.frame(this.defaultFrame(), { animate, pad: 0.01, ms: 420 }); }
   focus(name, animate = true) { return this.cam.frame(L.FOCUS[name], { animate, pad: 0.02 }); }
   setTab(tab, { animate = true } = {}) {
     if (tab === this.tab && this._tabReady) return this.fit(animate);
@@ -120,7 +120,7 @@ export class Table {
     this.root.dataset.tab = tab; this.userMoved = false;
     this._offs(false);                                  // los dos tableros visibles mientras la cámara se desliza
     const token = (this._tabToken = (this._tabToken || 0) + 1);
-    const p = this.cam.frame(this.defaultFrame(), { animate, pad: 0.01 });
+    const p = this.cam.frame(this.defaultFrame(), { animate, pad: 0.01, ms: 380 });
     const done = () => { if (token === this._tabToken) this._offs(true); };
     if (animate) Promise.resolve(p).then(done); else done();
     return p;

@@ -14,7 +14,9 @@ export class Camera {
   }
   get minScale() { return this.fitScale() * 0.8; }
   get maxScale() { return Math.max(1.6, this.fitScale() * 4); }
-  viewSize() { const r = this.vp.getBoundingClientRect(); return { w: r.width, h: r.height }; }
+  /** el viewport ocupa toda la pantalla: su rectángulo solo cambia al redimensionar, así que no se mide en cada evento de puntero */
+  rect() { if (this._vr) return this._vr; const r = this.vp.getBoundingClientRect(); if (r.width > 0 && r.height > 0) this._vr = r; return r; }
+  viewSize() { const r = this.rect(); return { w: r.width, h: r.height }; }
   area() { const v = this.viewSize(); const s = this.safe(); return { x: s.l, y: s.t, w: v.w - s.l - s.r, h: v.h - s.t - s.b }; }
   fitScale(rect = this.bounds) { const a = this.area(); return Math.min(a.w / rect.w, a.h / rect.h); }
   /** una sola escritura de transform por fotograma, aunque lleguen varios eventos de puntero; la capa se promueve solo mientras se mueve */
@@ -22,29 +24,34 @@ export class Camera {
     if (this._raf) return;
     this._raf = requestAnimationFrame(() => {
       this._raf = 0; this.table.style.transform = `translate(${this.x}px, ${this.y}px) scale(${this.s})`; this.onChange?.(this);
-      if (!this.table.classList.contains('moving')) this.table.classList.add('moving');
-      clearTimeout(this._idle); this._idle = setTimeout(() => this.table.classList.remove('moving'), 160);
+      this.promote();
     });
   }
+  /** promueve la capa de la mesa a la GPU (will-change) mientras hay movimiento y la suelta cuando para */
+  promote(hold = 220) {
+    if (!this.table.classList.contains('moving')) this.table.classList.add('moving');
+    clearTimeout(this._idle); this._idle = setTimeout(() => { if (!this.anim && !this.pointers.size) this.table.classList.remove('moving'); else this.promote(hold); }, hold);
+  }
   /** Encuadra un rectángulo de mesa en el área visible */
-  frame(rect = this.bounds, { pad = 0.02, animate = true, zoomMax = 3 } = {}) {
+  frame(rect = this.bounds, { pad = 0.02, animate = true, zoomMax = 3, ms = 650 } = {}) {
     const a = this.area();
     const w = rect.w * (1 + pad * 2), h = rect.h * (1 + pad * 2);
     const s = Math.min(a.w / w, a.h / h, zoomMax);
     const cx = rect.x + rect.w / 2, cy = rect.y + rect.h / 2;
     const x = a.x + a.w / 2 - cx * s, y = a.y + a.h / 2 - cy * s;
-    return this.to({ s, x, y }, animate);
+    return this.to({ s, x, y }, animate, ms);
   }
   to({ s, x, y }, animate = true, ms = 650) {
-    cancelAnimationFrame(this.anim);
+    cancelAnimationFrame(this.anim); this.anim = 0;
     s = clamp(s, this.minScale, this.maxScale); ({ x, y } = this.clampPos(x, y, s));
     if (!animate) { this.s = s; this.x = x; this.y = y; this.apply(); return Promise.resolve(); }
+    this.promote(ms + 120);
     const s0 = this.s, x0 = this.x, y0 = this.y, t0 = performance.now();
     return new Promise((res) => {
       const step = (t) => {
         const k = clamp((t - t0) / ms, 0, 1); const e = 1 - (1 - k) ** 3;
         this.s = s0 + (s - s0) * e; this.x = x0 + (x - x0) * e; this.y = y0 + (y - y0) * e; this.apply();
-        if (k < 1) this.anim = requestAnimationFrame(step); else res();
+        if (k < 1) this.anim = requestAnimationFrame(step); else { this.anim = 0; res(); }
       };
       this.anim = requestAnimationFrame(step);
     });
@@ -58,14 +65,14 @@ export class Camera {
   }
   zoomAt(factor, cx, cy) {
     const s = clamp(this.s * factor, this.minScale, this.maxScale);
-    const k = s / this.s; const r = this.vp.getBoundingClientRect();
+    const k = s / this.s; const r = this.rect();
     const px = cx - r.left, py = cy - r.top;
     this.x = px - (px - this.x) * k; this.y = py - (py - this.y) * k; this.s = s;
     const c = this.clampPos(this.x, this.y); this.x = c.x; this.y = c.y; this.apply();
   }
   /** de coordenadas de pantalla a coordenadas de mesa */
-  toTable(px, py) { const r = this.vp.getBoundingClientRect(); return { x: (px - r.left - this.x) / this.s, y: (py - r.top - this.y) / this.s }; }
-  toScreen(tx, ty) { const r = this.vp.getBoundingClientRect(); return { x: r.left + this.x + tx * this.s, y: r.top + this.y + ty * this.s }; }
+  toTable(px, py) { const r = this.rect(); return { x: (px - r.left - this.x) / this.s, y: (py - r.top - this.y) / this.s }; }
+  toScreen(tx, ty) { const r = this.rect(); return { x: r.left + this.x + tx * this.s, y: r.top + this.y + ty * this.s }; }
 
   _bind() {
     const vp = this.vp;
@@ -96,7 +103,8 @@ export class Camera {
       if (this.pointers.size === 0) { if (this.drag?.moved) this.justDragged = performance.now(); this.drag = null; }
     };
     window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
-    window.addEventListener('resize', () => { this.onResize?.(); });
+    window.addEventListener('resize', () => { this._vr = null; this.onResize?.(); });
+    window.addEventListener('orientationchange', () => { this._vr = null; });
     // el navegador puede desplazar contenedores ocultos al enfocar elementos: la cámara manda
     vp.addEventListener('scroll', () => { vp.scrollTop = 0; vp.scrollLeft = 0; });
     document.addEventListener('scroll', () => { document.scrollingElement.scrollTop = 0; document.scrollingElement.scrollLeft = 0; }, true);
@@ -107,7 +115,7 @@ export class Camera {
     const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
     const target = clamp(this.pinch.s * (d / this.pinch.d), this.minScale, this.maxScale);
     this.zoomAt(target / this.s, cx, cy);
-    const r = this.vp.getBoundingClientRect(); const c = this.clampPos(this.x + (cx - this.pinch.cx), this.y + (cy - this.pinch.cy)); this.x = c.x; this.y = c.y; this.pinch.cx = cx; this.pinch.cy = cy; this.apply(); void r;
+    const c = this.clampPos(this.x + (cx - this.pinch.cx), this.y + (cy - this.pinch.cy)); this.x = c.x; this.y = c.y; this.pinch.cx = cx; this.pinch.cy = cy; this.apply();
   }
   /** ¿acaba de terminar un arrastre? (para ignorar el "click" que le sigue) */
   wasDrag() { return this.drag?.moved || (this.justDragged && performance.now() - this.justDragged < 220); }
