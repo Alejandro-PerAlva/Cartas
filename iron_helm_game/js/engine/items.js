@@ -1,7 +1,9 @@
 /**
- * IRON HELM · Objetos consumibles, robo de botín/pociones, selección de cartas y operaciones de trama.
+ * IRON HELM · Objetos consumibles, robo de botín/pociones/artefactos, selección de cartas y operaciones de trama.
  */
-import { Game, ACTIONS } from './game.js';
+import { Game } from './game.js';
+
+const inRow = (row, v) => (Array.isArray(row) ? row.includes(v) : row === v);
 
 Object.assign(Game.prototype, {
   /* ============================================================================ uso de objetos */
@@ -13,10 +15,12 @@ Object.assign(Game.prototype, {
       let amount = n;
       if (this.hasCode('T7')) { amount += 2; this.log('Tiara: +2 de salud adicionales.', 'item'); }
       if (this.hasSkill('S16')) { amount += 1; this.log('Entereza: +1 de salud.', 'skill'); }
+      const extra = this.sumFx('healBonus'); // Mortero y Maja, Matilda
+      if (extra) { amount += extra; this.log(`+${extra} de salud adicional con la poción.`, 'item'); }
       this.gain('hp', amount, d.name); this.log(`Bebes ${d.name}: +${amount} de salud.`, 'item');
       this._cureAfflictions(false);
     };
-    switch (d.code) {
+    switch (d.key) {
       case 'L1': this.discardOwned(uid, 'use'); this.gain('energy', 2, d.name); this.log('Comes una ración: +2 de energía.', 'item'); break;
       case 'L5': case 'P1': heal(4); break;
       case 'P2': {
@@ -33,12 +37,47 @@ Object.assign(Game.prototype, {
       case 'AT9': { this.discardOwned(uid, 'use'); const r = this.roll(2, 'capsula'); const n = r[0] + r[1]; this.gain('hp', n, d.name); this.log(`Cápsula Corazón: +${n} de salud.`, 'item'); break; }
       case 'T3': case 'L16': {
         if (pr !== 'pair') this.fail('Solo puedes usarlo justo después de robar las dos cartas de mazmorra.');
-        if (d.code === 'L16') { if (this.s.lvl.lamp) this.fail('Ya has usado la Lámpara en este nivel.'); this.s.lvl.lamp = true; }
+        if (d.key === 'L16') { if (this.s.lvl.lamp) this.fail('Ya has usado la Lámpara en este nivel.'); this.s.lvl.lamp = true; }
         else this.discardOwned(uid, 'use');
         const z = this.s.z;
         z.pair.forEach((u, i) => this.emit('reveal', { uid: u, slot: i, side: 1, both: true }));
         this.log(`${d.name}: revelas ambas cartas y eliges una.`, 'item');
         this.ask('chooseOne', { uids: z.pair.slice() });
+        break;
+      }
+      // --- expansiones ---
+      case 'T19': this.discardOwned(uid, 'use'); this.gain('energy', 3, d.name); this.log('Brebaje de Hulnot: +3 de energía.', 'item'); break;
+      case 'L46': this.discardOwned(uid, 'use'); this.gain('hp', 3, d.name); this.gain('energy', 3, d.name); this.lose('poison', 2, d.name); this.log('Elixir de Helgen: +3 de salud, +3 de energía y −2 de veneno.', 'item'); break;
+      case 'T26': {
+        if (this.s.cards[uid].empty) this.fail('La Petaca está vacía: se rellena en el Campamento.');
+        this.s.cards[uid].empty = true; this.gain('hp', 2, d.name); this.log('Bebes de la Petaca: +2 de salud.', 'item');
+        this.emit('cardState', { uid, empty: true });
+        break;
+      }
+      case 'T29': {
+        const n = this.hero.blessings.length;
+        this.discardOwned(uid, 'use'); this.loseBlessing(n, d.name); this.gain('energy', n, d.name);
+        this.log(`Pan de Bruja: descartas ${n} bendición(es) y ganas ${n} de energía.`, 'item');
+        break;
+      }
+      case 'L26': { // Diario de Mizlak: revela 5 de botín, descarta las que quieras y devuelve el resto encima
+        if (!FREE_USE.includes(pr)) this.fail('Solo puedes usarlo entre turnos.');
+        this.discardOwned(uid, 'use');
+        const z = this.s.z; const top = [];
+        for (let i = 0; i < 5; i++) { const u = this.draw('loot'); if (u) top.push(u); }
+        this.log(`Diario de Mizlak: revelas ${top.length} cartas de botín.`, 'item');
+        if (!top.length) break;
+        this.s.prompt = null;
+        this.ask('pickCards', { title: 'Diario de Mizlak: elige las cartas de botín que descartas (el resto vuelve encima del mazo)', uids: top, min: 0, max: top.length, purpose: 'diary', back: true });
+        void z;
+        break;
+      }
+      case 'L32': { // Sello de Zogar: mirar el descarte del mazo de mazmorra (una vez por nivel)
+        if (this.s.lvl.seal) this.fail('Ya has usado el Sello de Zogar en este nivel.');
+        this.s.lvl.seal = true;
+        const uids = this.s.z.dungeonDiscard.slice();
+        this.emit('peekCards', { uids, deck: 'dungeonDiscard' });
+        this.log(`Sello de Zogar: el descarte de mazmorra contiene ${uids.length ? uids.map((u) => this.def(u).name).join(', ') : 'nada'}.`, 'item');
         break;
       }
       default: this.fail(`${d.name} no se usa de esta forma.`);
@@ -58,7 +97,19 @@ Object.assign(Game.prototype, {
     this.insert(function pickAf() { this.ask('pickCards', { title: 'Elige la aflicción que quieres curar', uids: list.slice(), min: 1, max: 1, purpose: 'cureAffliction' }); });
   },
 
-  /* ============================================================================ robar botín / pociones */
+  /** cartas que se resuelven en cuanto se roban (ya están en su pila de descarte) */
+  _instantItem(uid) {
+    const d = this.def(uid);
+    if (d.key === 'L27') {
+      this.ask('choice', { title: d.name, source: uid, text: d.text, scene: 'ops', options: [
+        { id: 'loot', label: 'Botín, poción y ración', text: 'Roba 1 carta de botín, 1 poción y gana 1 ración.', ops: [['loot', 1], ['potion', 1], ['gain', 'rations', 1]] },
+        { id: 'gold', label: 'Oro y ración', text: 'Ganas d6 de oro y 1 ración.', ops: [['gainDie', 'gold'], ['gain', 'rations', 1]] }] });
+    } else if (d.key === 'AT8') {
+      const n = this.rollOne('boñiga'); this.gain('gold', n, d.name); this.log(`Boñiga de Dragón: encuentras ${n} monedas de oro.`, 'item');
+    }
+  },
+
+  /* ============================================================================ robar botín / pociones / artefactos */
   gainLoot(n = 1) {
     const tasks = [];
     for (let i = 0; i < n; i++) tasks.push(function lootOne() { this._lootOne(); });
@@ -69,7 +120,35 @@ Object.assign(Game.prototype, {
     const uid = this.draw('loot');
     return uid;
   },
+  /** Terreno y Reliquias: coste en bendiciones del siguiente artefacto (1, 2, 3… acumulado en la partida) */
+  nextArtifactCost() { return (this.s.artifactsBought || 0) + 1; },
+  canBuyArtifact() {
+    if (!this.cat.extras.artifacts) return false;
+    const z = this.s.z;
+    return z.artifacts.length + z.artifactsDiscard.length > 0 && this.hero.blessings.length >= this.nextArtifactCost();
+  },
+  _buyArtifact() {
+    const cost = this.nextArtifactCost();
+    const uid = this.draw('artifacts');
+    if (!uid) { this._lootDraw(); return; }
+    this.loseBlessing(cost, 'artefacto');
+    this.s.artifactsBought = (this.s.artifactsBought || 0) + 1;
+    this.emit('artifactPaid', { uid, cost });
+    this.log(`Pagas ${cost} bendición(es) y robas el artefacto ${this.def(uid).name}.`, 'inv');
+    this.acquire(uid);
+  },
   _lootOne() {
+    if (this.canBuyArtifact()) {
+      const cost = this.nextArtifactCost();
+      this.ask('choice', { title: 'Robar botín', text: `Puedes pagar ${cost} ficha(s) de bendición para robar un artefacto en vez de una carta de botín.`, scene: 'generic', artifact: true,
+        options: [{ id: 'loot', label: 'Carta de botín', text: 'Robas la carta superior del mazo de botín.' },
+          { id: 'artifact', label: `Artefacto (${cost} bendición${cost > 1 ? 'es' : ''})`, text: 'Robas un artefacto aleatorio.' }],
+        onChoose: (id) => { if (id === 'artifact') this._buyArtifact(); else this._lootDraw(); } });
+      return;
+    }
+    this._lootDraw();
+  },
+  _lootDraw() {
     const lucky = this.equippedUid('L18'); // Amuleto de la Suerte
     const first = this.draw('loot');
     if (!first) { this.log('No quedan cartas de botín.', 'inv'); return; }
@@ -100,8 +179,8 @@ Object.assign(Game.prototype, {
     this.log(`Robas una poción: ${this.def(first).name}.`, 'inv'); this.acquire(first);
   },
   /** Elegir `n` cartas de un mazo concreto (Alquimia inicial, tramas…) */
-  _pickFromDeck(deck, n, title) {
-    const uids = this.s.z[deck].slice();
+  _pickFromDeck(deck, n, title, filter = null) {
+    const uids = this.s.z[deck].filter((u) => !filter || filter(u));
     if (!uids.length) return;
     this.ask('pickCards', { title, uids, min: Math.min(n, uids.length), max: Math.min(n, uids.length), purpose: 'deckPick', deck });
   },
@@ -127,6 +206,7 @@ Object.assign(Game.prototype, {
         break;
       case 'deckPick': {
         for (const u of chosen) { z[pr.deck].splice(z[pr.deck].indexOf(u), 1); this.log(`Eliges ${this.def(u).name}.`, 'inv'); this.acquire(u); }
+        if (pr.reshuffle) z[pr.deck] = this.rng.shuffle(z[pr.deck]);
         break;
       }
       case 'discardForBlessing': {
@@ -145,6 +225,35 @@ Object.assign(Game.prototype, {
         for (const u of chosen) { this.hero.afflictions.splice(this.hero.afflictions.indexOf(u), 1); z.afflictionsDiscard.push(u); this.emit('cureAffliction', { uid: u }); }
         this.log('Te curas de una aflicción.', 'affliction'); break;
       }
+      // --- expansiones ---
+      case 'scepter': case 'wild': // El Cetro / Encuentro Salvaje (empate): combatir al elegido
+        for (const u of rest) { z.enemiesDiscard.push(u); this.emit('discardCard', { uid: u, why: 'unchosen' }); }
+        this._fightDrawn(chosen[0], pr.opts); break;
+      case 'destroy': // Dragón de Cristal
+        for (const u of chosen) { this.log(`El objeto ${this.def(u).name} queda destruido.`, 'combat'); this.destroyOwned(u, 'destroyed'); }
+        break;
+      case 'diary': // Diario de Mizlak
+        for (const u of chosen) { z.lootDiscard.push(u); this.emit('discardCard', { uid: u, why: 'diary' }); }
+        z.loot.unshift(...rest);
+        this.log(`Descartas ${chosen.length} carta(s) y devuelves ${rest.length} encima del mazo de botín.`, 'item');
+        break;
+      case 'lighten': // El Viejo Puente
+        for (const u of chosen) this.discardOwned(u, 'bridge');
+        this.insert(function lightenAgain() { this._op(['lightenTo', pr.target], null); });
+        break;
+      case 'discardItem':
+        for (const u of chosen) { this.log(`Descartas ${this.def(u).name}.`, 'plot'); this.discardOwned(u, 'plot'); }
+        break;
+      case 'feedFire': { // Columna de Fuego: descarta un enemigo derrotado sin gastar y gana su oro
+        const e = z.graveyard.find((x) => x.uid === chosen[0]);
+        z.graveyard.splice(z.graveyard.indexOf(e), 1); z.enemiesDiscard.push(e.uid);
+        this.emit('discardCard', { uid: e.uid, why: 'fire' });
+        const n = this.def(e.uid).purse || 0;
+        this.log(`Arrojas ${this.def(e.uid).name} a las llamas: ganas ${n} de oro.`, 'plot');
+        if (n) this.gain('gold', n, 'columna de fuego');
+        this.lose('energy', 1, 'columna de fuego');
+        break;
+      }
       default: throw new Error(`Selección desconocida: ${pr.purpose}`);
     }
   },
@@ -155,11 +264,13 @@ Object.assign(Game.prototype, {
   },
   _op(op, src) {
     const [name, a, b] = op;
-    const z = this.s.z; const h = this.hero;
+    const z = this.s.z; const h = this.hero; const lvl = this.s.level;
     switch (name) {
       case 'gain': if (a === 'poison') { this.addPoison(b, src?.name); this.log(`Ganas ${b} ficha(s) de veneno.`, 'plot'); this.checkDeath(); } else this.gain(a, b, src?.name); break;
       case 'lose': case 'pay': this.lose(a, b, src?.name); if (a === 'hp') this.checkDeath(); break;
+      case 'gainDie': { const n = this.rollOne('tesoro'); this.gain(a, n, src?.name); this.log(`Ganas ${n} de ${a === 'gold' ? 'oro' : a}.`, 'explore'); break; }
       case 'morality': this.addMorality(a); break;
+      case 'eyes': this.addEyes(a); this._checkEyes(); break;
       case 'loot': this.gainLoot(a); break;
       case 'potion': this.gainPotion(a); break;
       case 'plot': this.drawPlot({ extra: true }); break;
@@ -168,6 +279,7 @@ Object.assign(Game.prototype, {
         this.log(`Tu moral (${this.morality()}) te concede ${n} ficha(s) de bendición.`, 'plot');
         if (n) this.gain('blessing', n, src?.name); break;
       }
+      case 'blessingByLevel': this.log(`Ganas ${lvl} ficha(s) de bendición (nivel de la mazmorra).`, 'plot'); this.gain('blessing', lvl, src?.name); break;
       case 'healthOrEnergyByMorality': {
         const n = Math.max(0, this.morality());
         if (!n) { this.log('Tu moral no es positiva: no ganas nada.', 'plot'); break; }
@@ -179,9 +291,16 @@ Object.assign(Game.prototype, {
       case 'gamble': this._gamble(0); break;
       case 'removeEnemy': {
         const code = a; let n = 0;
-        z.enemies = z.enemies.filter((u) => { if (this.def(u).code === code) { z.removed.push(u); n++; return false; } return true; });
-        z.enemiesDiscard = z.enemiesDiscard.filter((u) => { if (this.def(u).code === code) { z.removed.push(u); n++; return false; } return true; });
+        z.enemies = z.enemies.filter((u) => { if (this.def(u).key === code) { z.removed.push(u); n++; return false; } return true; });
+        z.enemiesDiscard = z.enemiesDiscard.filter((u) => { if (this.def(u).key === code) { z.removed.push(u); n++; return false; } return true; });
         if (n) this.log(`Los ${this.cat.byCode.get(code)?.name || code} te ignoran a partir de ahora.`, 'plot');
+        break;
+      }
+      case 'removeMimic': { // Venganza: retira al mimético del mazo de botín y vuelve a barajarlo
+        let n = 0;
+        for (const k of ['loot', 'lootDiscard']) z[k] = z[k].filter((u) => { if (this.def(u).key === a) { z.removed.push(u); n++; return false; } return true; });
+        z.loot = this.rng.shuffle(z.loot);
+        this.log(n ? 'Detectas al mimético y lo retiras del mazo de botín.' : 'No queda ningún mimético en el mazo de botín.', 'plot');
         break;
       }
       case 'pickLoot': {
@@ -191,10 +310,29 @@ Object.assign(Game.prototype, {
         break;
       }
       case 'pickPotionFromDeck': this._pickFromDeck('potions', 1, 'Elige una poción del mazo'); break;
+      case 'lootSearch': { // La Estatua con Alas (4/5): coge la carta de botín que quieras y baraja
+        const cand = z.loot.filter((u) => this.def(u).kind === 'item');
+        if (!cand.length) { this.log('El mazo de botín está vacío.', 'plot'); break; }
+        this.ask('pickCards', { title: 'Elige la carta de botín que quieras', uids: cand, min: 1, max: 1, purpose: 'deckPick', deck: 'loot', reshuffle: true });
+        break;
+      }
       case 'discardForBlessing': {
         const items = this.allItems();
         if (!items.length) { this.log('No tienes nada que ofrendar.', 'plot'); break; }
         this.ask('pickCards', { title: 'Elige las cartas que dejas como ofrenda (1 bendición por cada dos)', uids: items, min: 0, max: items.length, purpose: 'discardForBlessing' });
+        break;
+      }
+      case 'discardItem': {
+        const items = this.allItems().filter((u) => !this.def(u).fx?.cursed);
+        if (!items.length) { this.log('No tienes objetos que descartar.', 'plot'); break; }
+        this.ask('pickCards', { title: 'Descarta un objeto de tu inventario', uids: items, min: 1, max: 1, purpose: 'discardItem' });
+        break;
+      }
+      case 'lightenTo': { // El Viejo Puente: descarta objetos hasta una carga máxima de n
+        if (this.weight() <= a) { this.log(`Tu carga (${this.weight()}) ya no supera ${a}.`, 'plot'); break; }
+        const items = this.allItems().filter((u) => !this.def(u).fx?.cursed);
+        if (!items.length) break;
+        this.ask('pickCards', { title: `Descarta objetos hasta que tu carga no supere ${a} (ahora ${this.weight()})`, uids: items, min: 1, max: items.length, purpose: 'lighten', target: a });
         break;
       }
       case 'clerigaGift': {
@@ -209,12 +347,87 @@ Object.assign(Game.prototype, {
       }
       case 'dieTable': {
         const d = this.rollOne('tabla');
-        const row = a.find((r) => r[0] === d);
+        const row = a.find((r) => inRow(r[0], d));
         this.log(`Tiras un d6: ${d}.`, 'plot');
         if (row) this.applyOps(row[1], src);
         break;
       }
+      case 'dieParity': { // Comida Sospechosa
+        const d = this.rollOne('tabla');
+        this.log(`Tiras un d6: ${d} (${d % 2 ? 'impar' : 'par'}).`, 'plot');
+        this.applyOps(d % 2 ? b : a, src);
+        break;
+      }
+      case 'moralityTable': {
+        const m = Math.max(-5, Math.min(5, this.morality()));
+        const row = a.find((r) => inRow(r[0], m));
+        this.log(`Tu moral es ${m > 0 ? '+' : ''}${m}.`, 'plot');
+        if (row) this.applyOps(row[1], src);
+        break;
+      }
+      case 'loseAllBlessings': { const n = this.hero.blessings.length; this.loseBlessing(n, src?.name); this.log(`Pierdes todas tus fichas de bendición (${n}).`, 'plot'); break; }
+      case 'loseLevelHp': this.lose('hp', lvl, src?.name); this.log(`Pierdes ${lvl} de salud.`, 'plot'); this.checkDeath(); break;
       case 'curePoison': this.lose('poison', h.poison, src?.name); this.log('Te curas todo el veneno.', 'plot'); break;
+      case 'fight': { // roba un enemigo y combate con los ajustes de la carta
+        const o = a || {};
+        this._drawAndFight({ source: 'plot', ambush: o.ambush || 'normal', hpBonus: (o.hpBonus || 0) + (o.hpLevel ? lvl : 0), initialBonus: o.initialBonus || 0, onWin: o.onWin || null });
+        break;
+      }
+      case 'fightRandom': this.log('¡Aparece un enemigo!', 'plot'); this._drawAndFight({ source: 'plot', ambush: 'normal', hpBonus: lvl, initialBonus: 0 }); break;
+      case 'randomSkill': { // El Viejo Libro
+        const cand = z.skills.filter((u) => !h.skills.includes(this.s.cards[u].id));
+        if (!cand.length) { this.log('No quedan habilidades por aprender.', 'plot'); break; }
+        const u = cand[this.rng.int(cand.length)]; const id = this.s.cards[u].id;
+        this._learnSkillFree(id);
+        this.log(`Aprendes la habilidad ${this.cat.def(id).name}.`, 'skill');
+        if (this.cat.def(id).key === 'S2') this._grantAlchemy();
+        break;
+      }
+      case 'feedFire': {
+        const uids = this.unspentEnemies().map((e) => e.uid);
+        if (!uids.length) { this.log('No tienes enemigos derrotados sin gastar.', 'plot'); break; }
+        this.ask('pickCards', { title: 'Elige el enemigo derrotado que arrojas al fuego', uids, min: 1, max: 1, purpose: 'feedFire' });
+        break;
+      }
+      case 'climb': { // La Pendiente Resbaladiza: se repite hasta sacar un 6
+        const d = this.rollOne('escalar');
+        this.log(`Escalas: sacas ${d}.`, 'plot');
+        if (d === 1) { this.lose('hp', lvl + 2, 'caída'); this.log(`Te resbalas y caes: pierdes ${lvl + 2} de salud.`, 'plot'); if (this.checkDeath()) break; }
+        else if (d <= 3) { this.lose('energy', 1, 'escalar'); this.log('Pierdes el equilibrio: −1 de energía.', 'plot'); }
+        else if (d <= 5) { this.gain('gold', 1, 'escalar'); this.log('Encuentras 1 moneda de oro entre las rocas.', 'plot'); }
+        else {
+          this.log(`¡Llegas a la cima! Ganas ${lvl} de oro, 1 botín y 1 poción.`, 'plot');
+          this.gain('gold', lvl, 'cima'); this.gainLoot(1); this.gainPotion(1);
+          break;
+        }
+        this.ask('choice', { title: src?.name || 'La Pendiente Resbaladiza', source: null, text: 'Puedes seguir escalando hasta que saques un 6.', scene: 'ops',
+          options: [{ id: 'climb', label: 'Seguir escalando', text: 'Vuelve a tirar 1d6.', ops: [['climb']] }, { id: 'stop', label: 'Marcharte', text: '', ops: [] }] });
+        break;
+      }
+      case 'sellBlessings': { // El Maligno
+        const n = this.hero.blessings.length;
+        this.ask('choice', { title: src?.name || 'El Maligno', text: 'Puedes cambiar 1 bendición por 2 de oro o 1 ración, o 2 bendiciones por 1 poción.', scene: 'ops',
+          options: [
+            { id: 'gold', label: '1 bendición → 2 de oro', text: '', ops: [['pay', 'blessing', 1], ['gain', 'gold', 2]], disabled: n < 1, reason: 'Sin bendiciones' },
+            { id: 'ration', label: '1 bendición → 1 ración', text: '', ops: [['pay', 'blessing', 1], ['gain', 'rations', 1]], disabled: n < 1, reason: 'Sin bendiciones' },
+            { id: 'potion', label: '2 bendiciones → 1 poción', text: '', ops: [['pay', 'blessing', 2], ['potion', 1]], disabled: n < 2, reason: 'Necesitas 2 bendiciones' },
+            { id: 'none', label: 'No vender', text: '', ops: [] }] });
+        break;
+      }
+      case 'altarBlessing': {
+        let n = 1;
+        if (this.hasSkill('S4')) n = 2;
+        if (this.hasCode('T16')) n = Math.max(n, 2);
+        n += this.envFx().altarBlessings || 0;
+        const got = this.gain('blessing', n, 'altar'); this.log(`Rezas en el altar: ganas ${got} ficha(s) de bendición.`, 'altar');
+        break;
+      }
+      case 'altarCure': {
+        const [x, y] = this.roll(2, 'altar');
+        const n = Math.abs(x - y);
+        this.lose('poison', n, 'altar'); this.log(`El altar te cura ${n} ficha(s) de veneno (d6−d6).`, 'altar');
+        break;
+      }
       case 'espejo': {
         const d = this.rollOne('espejo');
         this.log(`Atraviesas el espejo: ${d}.`, 'plot');
@@ -246,3 +459,4 @@ Object.assign(Game.prototype, {
   },
 });
 
+const FREE_USE = ['turn', 'setup'];

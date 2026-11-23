@@ -6,23 +6,23 @@
 import { clamp } from './dom.js';
 
 export class Camera {
-  constructor(viewport, table, tableSize, { safe = () => ({ t: 0, b: 0, l: 0, r: 0 }), onChange } = {}) {
-    this.vp = viewport; this.table = table; this.size = tableSize; this.safe = safe; this.onChange = onChange;
+  constructor(viewport, table, bounds, { safe = () => ({ t: 0, b: 0, l: 0, r: 0 }), onChange } = {}) {
+    this.vp = viewport; this.table = table; this.bounds = bounds; this.safe = safe; this.onChange = onChange;
     this.s = 1; this.x = 0; this.y = 0; this.enabled = true; this.anim = null;
     this.pointers = new Map(); this.drag = null; this.pinch = null;
     this._bind();
   }
-  get minScale() { return this.fitScale() * 0.85; }
+  get minScale() { return this.fitScale() * 0.8; }
   get maxScale() { return Math.max(1.6, this.fitScale() * 4); }
   viewSize() { const r = this.vp.getBoundingClientRect(); return { w: r.width, h: r.height }; }
   area() { const v = this.viewSize(); const s = this.safe(); return { x: s.l, y: s.t, w: v.w - s.l - s.r, h: v.h - s.t - s.b }; }
-  fitScale(rect = { x: 0, y: 0, w: this.size.w, h: this.size.h }) { const a = this.area(); return Math.min(a.w / rect.w, a.h / rect.h); }
+  fitScale(rect = this.bounds) { const a = this.area(); return Math.min(a.w / rect.w, a.h / rect.h); }
   apply() {
     this.table.style.transform = `translate(${this.x}px, ${this.y}px) scale(${this.s})`;
     this.onChange?.(this);
   }
   /** Encuadra un rectángulo de mesa en el área visible */
-  frame(rect = { x: 0, y: 0, w: this.size.w, h: this.size.h }, { pad = 0.02, animate = true, zoomMax = 3 } = {}) {
+  frame(rect = this.bounds, { pad = 0.02, animate = true, zoomMax = 3 } = {}) {
     const a = this.area();
     const w = rect.w * (1 + pad * 2), h = rect.h * (1 + pad * 2);
     const s = Math.min(a.w / w, a.h / h, zoomMax);
@@ -45,10 +45,11 @@ export class Camera {
     });
   }
   clampPos(x, y, s = this.s) {
-    const a = this.area(); const tw = this.size.w * s, th = this.size.h * s; const m = 80;
-    x = tw <= a.w ? a.x + (a.w - tw) / 2 : clamp(x, a.x + a.w - tw - m, a.x + m);
-    y = th <= a.h ? a.y + (a.h - th) / 2 : clamp(y, a.y + a.h - th - m, a.y + m);
-    return { x, y };
+    const a = this.area(); const b = this.bounds; const bw = b.w * s, bh = b.h * s; const m = 90;
+    let left = x + b.x * s, top = y + b.y * s;
+    left = bw <= a.w ? a.x + (a.w - bw) / 2 : Math.max(a.x + a.w - bw - m, Math.min(a.x + m, left));
+    top = bh <= a.h ? a.y + (a.h - bh) / 2 : Math.max(a.y + a.h - bh - m, Math.min(a.y + m, top));
+    return { x: left - b.x * s, y: top - b.y * s };
   }
   zoomAt(factor, cx, cy) {
     const s = clamp(this.s * factor, this.minScale, this.maxScale);
@@ -66,7 +67,7 @@ export class Camera {
     vp.addEventListener('wheel', (e) => { if (!this.enabled) return; e.preventDefault(); cancelAnimationFrame(this.anim); this.zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY); }, { passive: false });
     vp.addEventListener('pointerdown', (e) => {
       if (!this.enabled) return;
-      if (e.target.closest('#hud, #camctl, #trayTab, #fan, #overlay, #actions')) return;
+      if (e.target.closest('#hud, #camctl, #nav, #fan, #overlay, #actions, #pop, [data-drag]')) return;
       cancelAnimationFrame(this.anim);
       this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (this.pointers.size === 1) this.drag = { x: e.clientX, y: e.clientY, ox: this.x, oy: this.y, moved: false, id: e.pointerId };

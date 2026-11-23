@@ -5,7 +5,9 @@ export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 /** h('div.clase#id', {attrs}, ...hijos) */
 export function h(tag, attrs, ...kids) {
   let id, cls;
+  tag = tag.replace(/\.+$/, '').replace(/\.{2,}/g, '.');
   const m = tag.match(/^([a-z0-9]+)((?:[.#][\w-]+)*)$/i);
+  if (!m) throw new Error(`Etiqueta inválida: ${tag}`);
   const el = document.createElement(m ? m[1] : tag);
   if (m && m[2]) for (const part of m[2].match(/[.#][\w-]+/g)) { if (part[0] === '.') (cls ||= []).push(part.slice(1)); else id = part.slice(1); }
   if (id) el.id = id; if (cls) el.className = cls.join(' ');

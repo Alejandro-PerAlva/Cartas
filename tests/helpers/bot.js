@@ -21,7 +21,10 @@ export function audit(g) {
   s.eq.AC.forEach((u) => put(u, 'eq.AC'));
   s.hero.afflictions.forEach((u) => put(u, 'hero.afflictions'));
   Object.values(s.hero.skillCards).forEach((u) => put(u, 'hero.skillCards'));
-  if (s.combat && !s.combat.defeated) put(s.combat.uid, 'combat');
+  (s.mercs || []).forEach((m) => put(m.uid, 'mercs'));
+  if (s.env) put(s.env, 'env');
+  if (s.combat && !seen.has(s.combat.uid)) put(s.combat.uid, 'combat');
+  (s.ctx.inPlay || []).forEach((u) => { if (!seen.has(u)) put(u, 'ctx.inPlay'); });
   const pr = s.prompt;
   if (pr?.uids && ['pickCards'].includes(pr.type)) pr.uids.forEach((u) => { if (!seen.has(u)) put(u, 'prompt'); });
   if (s.ctx.stock) s.ctx.stock.forEach((u) => put(u, 'ctx.stock'));
@@ -36,10 +39,12 @@ export function checkInvariants(g) {
   if (h.morality < -5 || h.morality > 5) errs.push(`moral ${h.morality}`);
   if (h.blessings.length > 12) errs.push('demasiadas bendiciones');
   if (g.s.eyes < 0) errs.push('ojos negativos');
+  for (const m of g.s.mercs || []) if (m.morale < 1 || m.morale > m.max) errs.push(`moral de esbirro ${m.morale}/${m.max}`);
+  if ((g.s.mercs || []).length > 3) errs.push('demasiados esbirros');
   return errs;
 }
 
-export function play(g, { seed = 1, maxSteps = 3000, style = 'random' } = {}) {
+export function play(g, { seed = 1, maxSteps = 3000, style = 'random', stopAt = null } = {}) {
   const r = mulberry(seed * 7919 + 13);
   const pick = (a) => a[Math.floor(r() * a.length)];
   const log = [];
@@ -50,12 +55,14 @@ export function play(g, { seed = 1, maxSteps = 3000, style = 'random' } = {}) {
     log.push(`${before}:${type}${res.ok ? '' : '!' + res.error}`);
     return res;
   };
-  while (!g.s.over && steps++ < maxSteps) {
+  while (!g.s.over && steps++ < maxSteps + (stopAt ? 2000 : 0)) {
     const s = g.s; const pr = s.prompt;
+    if (stopAt && steps > maxSteps && pr?.type === stopAt && g.canSave()) return { steps, over: null, log };
     if (!pr) throw new Error(`Sin prompt ni fin de partida tras ${log.slice(-8).join(' > ')}`);
     const errs = checkInvariants(g); if (errs.length) throw new Error(`Invariantes: ${errs.join(', ')} tras ${log.slice(-8).join(' > ')}`);
     const a = audit(g);
     if (a.problems.length) throw new Error(`Cartas duplicadas: ${a.problems.join('; ')} tras ${log.slice(-8).join(' > ')}`);
+    if (a.orphans) throw new Error(`Cartas perdidas (${a.orphans}) en "${pr.type}" tras ${log.slice(-8).join(' > ')}`);
     const free = () => {
       // acciones libres entre turnos: curar, equipar, aprender
       const h = s.hero;
@@ -63,8 +70,11 @@ export function play(g, { seed = 1, maxSteps = 3000, style = 'random' } = {}) {
         const d = g.def(u);
         if (['L5', 'P1'].includes(d.code) && h.hp <= g.maxHp() - 4 && r() < 0.8) { if (act('use', { uid: u }).ok) return true; }
         if (d.code === 'P2' && h.poison >= 2 && r() < 0.8) { if (act('use', { uid: u }).ok) return true; }
-        if (['L1', 'P6', 'L20'].includes(d.code) && h.energy <= 5 && r() < 0.6) { if (act('use', { uid: u }).ok) return true; }
+        if (['L1', 'P6', 'L20', 'T19', 'T29'].includes(d.code) && h.energy <= 5 && r() < 0.6) { if (act('use', { uid: u }).ok) return true; }
+        if (['L46', 'T26'].includes(d.code) && h.hp <= g.maxHp() - 3 && r() < 0.7) { if (act('use', { uid: u }).ok) return true; }
+        if (['L26', 'L32'].includes(d.code) && r() < 0.3) { if (act('use', { uid: u }).ok) return true; }
       }
+      for (const m of s.mercs || []) if (m.morale < m.max && h.gold > 2 && r() < 0.5) { if (act('payMorale', { uid: m.uid }).ok) return true; }
       for (const u of s.z.hand.slice()) { if (r() < 0.7 && act('equip', { uid: u }).ok) return true; }
       for (const sk of s.z.skills) { const id = s.cards[sk].id; if (g.canLearn(id) && r() < 0.8) { if (act('learn', { id }).ok) return true; } }
       return false;
@@ -72,6 +82,8 @@ export function play(g, { seed = 1, maxSteps = 3000, style = 'random' } = {}) {
     switch (pr.type) {
       case 'setup': {
         for (const u of s.z.trappings.slice()) { const d = g.def(u); if (d.price <= s.hero.gold && r() < 0.4) { act('buy', { id: d.id }); break; } }
+        const inn = g.s.prompt.type === 'setup' ? g.s.prompt.inn : null;
+        if (inn && inn.hired.length < inn.max && r() < 0.6) { const u = pick(inn.candidates.filter((x) => !inn.hired.includes(x))); if (u && g.def(u).cost <= s.hero.gold) { act('hire', { uid: u }); break; } }
         if (g.s.prompt.type === 'setup' && r() < 0.5) { for (const u of s.z.hand.slice()) act('equip', { uid: u }); }
         if (g.s.prompt.type === 'setup') act('begin');
         break;
@@ -80,10 +92,12 @@ export function play(g, { seed = 1, maxSteps = 3000, style = 'random' } = {}) {
       case 'pair': {
         const lamp = g.allItems().find((u) => ['T3', 'L16'].includes(g.def(u).code));
         if (lamp && r() < 0.3 && act('use', { uid: lamp }).ok) break;
+        if (pr.sixthSense && r() < 0.3 && act('sixthSense').ok) break;
         act('reveal', { slot: Math.floor(r() * 2) }); break;
       }
       case 'chooseOne': act('pickOne', { slot: Math.floor(r() * 2) }); break;
       case 'decide': {
+        if (pr.flee && r() < 0.15 && act('flee').ok) break;
         if (pr.forced || r() < (style === 'cautious' ? 0.7 : 0.55)) act('resolve'); else act('decline'); break;
       }
       case 'choice': {
@@ -113,6 +127,7 @@ export function play(g, { seed = 1, maxSteps = 3000, style = 'random' } = {}) {
         if (pr.throwables.length && r() < 0.3) { act('throwItem', { uid: pr.throwables[0] }); break; }
         for (const u of g.allItems()) { const d = g.def(u); if (['L5', 'P1'].includes(d.code) && h.hp <= 5 && r() < 0.9) { act('use', { uid: u }); break; } }
         if (g.s.prompt?.type !== 'attack') break;
+        if (pr.payHp?.length && r() < 0.25) { const o = pick(pr.payHp); const n = 1 + Math.floor(r() * 2); if (h.hp > n + o.extra + 3 && act('attack', { energy: n, payHp: o.id }).ok) break; }
         const e = pr.hasWeapon ? Math.min(pr.maxEnergy, 1 + Math.floor(r() * 3)) : 0;
         const res = act('attack', { energy: e, furia: pr.furia && r() < 0.3 && e > 0, mandoble: pr.mandoble && r() < 0.3 && e > 0 });
         if (!res.ok) act('attack', { energy: 0 });
@@ -120,14 +135,21 @@ export function play(g, { seed = 1, maxSteps = 3000, style = 'random' } = {}) {
       }
       case 'postRoll': {
         const o = pr.options.find((x) => !x.id.startsWith('all:blessing') || r() < 0.3);
-        if (o && r() < 0.5) act('reroll', { id: o.id }); else act('accept');
+        if (o && r() < 0.5) act('reroll', { id: o.id, die: o.needsDie ? Math.floor(r() * pr.dice.length) : undefined }); else act('accept');
         break;
       }
-      case 'enemyRoll': act(r() < 0.5 ? 'luckReroll' : 'luckKeep'); break;
+      case 'enemyRoll': {
+        if (pr.options?.length && r() < 0.5) { act('enemyReact', { id: pick(pr.options).id }); break; }
+        act('luckKeep'); break;
+      }
       case 'merchant': {
         const k = r();
         if (k < 0.3) { const u = pick(pr.stock.length ? pr.stock : [0]); if (u && g.buyPrice(u) <= s.hero.gold) { act('merchantBuy', { uid: u }); break; } }
         if (k < 0.5) { const own = g.allItems(); if (own.length) { act('merchantSell', { uid: pick(own) }); break; } }
+        if (pr.trade && k < 0.6) {
+          const give = g.allItems().find((u) => !g.def(u).fx?.cursed && pr.stock.some((t) => (g.def(u).price || 0) > (g.def(t).price || 0)));
+          if (give) { const take = pr.stock.find((t) => (g.def(give).price || 0) > (g.def(t).price || 0)); if (act('merchantTrade', { give, take }).ok) break; }
+        }
         act('leaveMerchant'); break;
       }
       case 'overweight': { const items = g.allItems().filter((u) => !g.def(u).fx?.cursed); act('dropOver', { uid: pick(items) }); break; }

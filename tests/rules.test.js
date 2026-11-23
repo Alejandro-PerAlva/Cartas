@@ -56,7 +56,37 @@ test('Ataque: 1d6 por ficha de energía + bonificación; mata y da oro y botín'
   assert.equal(g.s.hero.energy, energy0 - 1);
   assert.equal(g.s.hero.gold, gold0 + 1);       // moneda del Goblin
   assert.equal(g.s.z.graveyard.length, 1);
+  // tesoro tipo 1: el reglamento 2.4 (p. 14) deja elegir entre una carta de botín o una moneda de oro
+  assert.equal(g.s.prompt.type, 'choice'); assert.equal(g.s.prompt.treasure, 1);
+  assert.deepEqual(g.s.prompt.options.map((o) => o.id), ['loot', 'gold']);
+  g.act('choose', { id: 'loot' });
   assert.ok(g.allItems().some((u) => g.def(u).code === 'L5')); // botín robado
+});
+
+test('Tesoro tipo 1: se puede elegir 1 moneda de oro en vez de la carta de botín; tipo 2 da botín y poción sin elegir', () => {
+  const g = start('c4'); topDungeon(g, 'D6', 'D10'); topEnemy(g, 'E1'); rig(g, [3, 3]);
+  turn(g, 1); toAttack(g);
+  const loot0 = g.s.z.loot.length; const gold0 = g.hero.gold;
+  rig(g, [6]); g.act('attack', { energy: 1 });
+  g.act('choose', { id: 'gold' });
+  assert.equal(g.hero.gold, gold0 + 1 + 1);       // bolsa del Goblin + moneda del tesoro
+  assert.equal(g.s.z.loot.length, loot0);         // no se roba botín
+  assert.equal(g.s.prompt.type, 'turn');
+  const h = start('c4'); discardAll(h); give(h, 'T1'); h.hero.energy = 9; topDungeon(h, 'D6', 'D10'); topEnemy(h, 'E10'); rig(h, [3, 3]); // Masa Devoradora: tesoro 2
+  turn(h, 1); toAttack(h);
+  const items0 = h.allItems().length;
+  rig(h, [6, 6, 6]); h.act('attack', { energy: 3 }); rig(h, [2, 2]);
+  while (h.s.prompt?.type === 'attack') { rig(h, [6, 6, 6]); h.act('attack', { energy: 3 }); }
+  assert.notEqual(h.s.prompt?.type, 'choice');
+  assert.equal(h.allItems().length, items0 + 2);  // botín + poción
+});
+
+test('Tesoro tipo 1 con Amuleto de la Suerte: elegir botín roba dos y te quedas con una', () => {
+  const g = start('c4', { campaign: 'warren' }); discardAll(g); give(g, 'T1'); give(g, 'L18');
+  topDungeon(g, 'D6', 'D10'); topEnemy(g, 'E13'); rig(g, [3, 3]); turn(g, 1); toAttack(g); // Grunkle: tesoro 1
+  rig(g, [6, 6]); g.act('attack', { energy: 2 });
+  g.act('choose', { id: 'loot' });
+  assert.equal(g.s.prompt.type, 'pickCards'); assert.equal(g.s.prompt.purpose, 'loot'); assert.equal(g.s.prompt.uids.length, 2);
 });
 
 test('Daga: los 6 se relanzan una vez; Espada Larga: cada 6 suma +1; Espada Ardiente: los 6 valen 7 (+3 contra fuego)', () => {
@@ -114,7 +144,7 @@ test('Puntuación final: salud + energía + 3×oro + 2×enemigos + valor de obje
   g.s.z.graveyard.push({ uid: g.mk('e1'), spent: false });
   give(g, 'T4'); // armadura de cuero: valor 3
   const sc = g.score();
-  assert.equal(sc.total, 10 + 5 + 12 + 2 + 3 + 3 - 2);
+  assert.equal(sc.total, 10 + 5 + 12 + 2 + 3 + 6 - 2);
 });
 
 test('Campaña Warren: retira Goblins, Orcos y Skinklings y sustituye el jefe por el Cíclope', () => {

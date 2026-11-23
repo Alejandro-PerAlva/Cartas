@@ -5,7 +5,7 @@
 import { h, $, sleep, animate, speed, coinImg, WK, WK_ICON } from './dom.js';
 import { cardEl, backOf, cardPath } from './cards.js';
 import { sound } from './audio.js';
-import { ZONES } from './layout.js';
+import { icon } from './icons.js';
 
 const WEAK = { fire: '🔥 Fuego', ice: '❄️ Hielo', undead: '💀 No muerto' };
 
@@ -20,8 +20,13 @@ export class Overlays {
   clearPrompt() { this.prompt?.remove(); this.prompt = null; }
   clearUser() { this.user?.remove(); this.user = null; this.userKind = null; }
   mountPrompt(el) { this.clearPrompt(); this.prompt = el; this.root.append(el); }
-  mountUser(el, kind) { this.clearUser(); this.user = el; this.userKind = kind; this.root.append(el); sound.page(); }
-  get busyModal() { return !!this.prompt; }
+  mountUser(el, kind, { silent = false } = {}) { this.clearUser(); this.user = el; this.userKind = kind; this.root.append(el); if (!silent) sound.page(); }
+  get busyModal() { return !!this.prompt || this.userKind === 'shop'; }
+  /** al ejecutar una acción, los menús se retiran YA para dejar ver la animación que sigue */
+  closeForAction() {
+    const p = this.prompt; if (p) { this.prompt = null; p.classList.add('leaving'); setTimeout(() => p.remove(), 200); }
+    if (this.user && this.userKind !== 'shop') this.clearUser();
+  }
 
   /* ----------------------------------------------------------------- elementos comunes */
   faceCard(uidOrImg, { cls = '' } = {}) {
@@ -48,11 +53,15 @@ export class Overlays {
   showPick(pr) {
     const g = this.g; const sel = new Set();
     const need = pr.min === pr.max ? `Elige ${pr.min}` : pr.min === 0 ? `Elige hasta ${pr.max}` : `Elige entre ${pr.min} y ${pr.max}`;
-    const seal = h('button.seal.gold.off', { onclick: () => confirm() }, 'ELEGIR');
-    const n = pr.uids.length; const cw = n <= 2 ? 'min(34vw, 52vh)' : n <= 4 ? 'min(22vw, 44vh)' : n <= 8 ? 'min(15vw, 34vh)' : 'min(11vw, 26vh)';
+    const seal = h('button.btn.primary.off', { onclick: () => confirm() }, 'ELEGIR');
+    const n = pr.uids.length; const cw = n <= 2 ? 'min(34vw, 46vh)' : n <= 4 ? 'min(22vw, 40vh)' : n <= 8 ? 'min(15vw, 30vh)' : 'min(11vw, 24vh)';
     const row = h('div.pickrow', { style: `--pcw:${cw}` });
-    const refresh = () => { const ok = sel.size >= pr.min && sel.size <= pr.max; seal.classList.toggle('off', !ok); seal.classList.toggle('pulse', ok); row.querySelectorAll('.pc').forEach((p) => p.classList.toggle('sel', sel.has(+p.dataset.uid))); };
-    const confirm = () => { if (seal.classList.contains('off')) return; sound.click(); this.app.act('pickCards', { uids: [...sel] }); };
+    const refresh = () => { const ok = sel.size >= pr.min && sel.size <= pr.max; seal.classList.toggle('off', !ok); row.querySelectorAll('.pc').forEach((p) => p.classList.toggle('sel', sel.has(+p.dataset.uid))); };
+    const confirm = () => {
+      if (seal.classList.contains('off')) return; sound.click();
+      for (const u of sel) this.app.noteOrigin(u, row.querySelector(`.pc[data-uid="${u}"]`));
+      this.app.act('pickCards', { uids: [...sel] });
+    };
     for (const uid of pr.uids) {
       const d = g.def(uid);
       const pc = h('div.pc', { dataset: { uid }, onclick: () => {
@@ -62,9 +71,9 @@ export class Overlays {
         d.price != null && d.kind === 'item' ? h('div.price', String(d.price), coinImg(), ` · ⚖ ${d.weight}`) : null);
       row.append(pc);
     }
-    const hint = pr.max === 1 && pr.uids.length > 1 ? 'Toca una carta para elegirla (tócala otra vez para confirmar)' : '';
-    const el = h('div', { style: 'position:absolute;inset:0' }, h('div.veil'), h('div.pick-title', pr.title || need), h('div.pick-title', { style: `top:calc(110px + var(--sai-t));font:italic 500 18px var(--font-body);color:var(--parch)` }, hint || need), row,
-      h('div.pick-foot', pr.min === 0 ? h('button.seal.sm', { onclick: () => this.app.act('pickCards', { uids: [] }) }, 'NINGUNA') : null, seal));
+    const hint = pr.max === 1 && pr.uids.length > 1 ? 'Toca una carta para elegirla; tócala otra vez para confirmar.' : need;
+    const el = h('div.modal', h('div.veil.mid'), h('div.pick-head', h('div.pick-title', pr.title || need), h('div.pick-sub', hint)), h('div.pickwrap', row),
+      h('div.pick-foot', pr.min === 0 ? h('button.btn.quiet', { onclick: () => this.app.act('pickCards', { uids: [] }) }, 'NINGUNA') : null, seal));
     this.mountPrompt(el); refresh();
   }
 
@@ -72,14 +81,13 @@ export class Overlays {
   showMerchant(pr) {
     const g = this.g; let selected = null;
     const gold = () => g.s.hero.gold;
-    const bazaar = h('div.pickrow', { style: 'position:static;transform:none;justify-content:center;margin-top:10px' });
-    const mine = h('div.pickrow', { style: 'position:static;transform:none;justify-content:center;margin-top:6px;max-height:34vh' });
+    const bazaar = h('div.pickrow.flat'); const mine = h('div.pickrow.flat');
     const bar = h('div', { style: 'text-align:center;min-height:90px;margin-top:10px' });
     const rebuild = () => {
       bazaar.innerHTML = ''; mine.innerHTML = ''; bar.innerHTML = '';
       for (const uid of g.s.ctx.stock || []) {
         const p = g.buyPrice(uid);
-        const pc = h('div.pc' + (selected?.uid === uid && selected.mode === 'buy' ? '.sel' : ''), { onclick: () => { sound.tap(); selected = { uid, mode: 'buy' }; rebuild(); } }, this.faceCard(uid), h('div.price', String(p), coinImg()));
+        const pc = h('div.pc' + (selected?.uid === uid && selected.mode === 'buy' ? '.sel' : ''), { dataset: { uid }, onclick: () => { sound.tap(); selected = { uid, mode: 'buy' }; rebuild(); } }, this.faceCard(uid), h('div.price', String(p), coinImg()));
         if (p > gold()) pc.style.filter = 'grayscale(.6) brightness(.8)';
         bazaar.append(pc);
       }
@@ -93,35 +101,35 @@ export class Overlays {
       if (selected) {
         const d = g.def(selected.uid);
         const emerald = g.equippedUid('L29');
-        bar.append(h('div', { style: 'font:700 20px var(--font-title);color:var(--gold2);margin-bottom:6px' }, d.name),
-          selected.mode === 'buy' ? h('button.seal.gold' + (g.buyPrice(selected.uid) > gold() ? '.off' : ''), { onclick: () => { sound.coin(); this.app.act('merchantBuy', { uid: selected.uid }); selected = null; } }, 'COMPRAR', h('br'), String(g.buyPrice(selected.uid)), coinImg())
-            : h('button.seal.green', { onclick: () => { sound.coin(); this.app.act('merchantSell', { uid: selected.uid }); selected = null; } }, 'VENDER', h('br'), `+${g.sellPrice()}`, coinImg()),
-          selected.mode === 'buy' && emerald ? h('button.seal.sm', { style: 'margin-left:12px', onclick: () => { this.app.act('merchantEmerald', { uid: selected.uid }); selected = null; } }, 'ESMERALDA') : null,
-          h('button.seal.sm', { style: 'margin-left:12px', onclick: () => this.inspect({ uid: selected.uid }) }, 'VER'));
+        bar.append(...[h('div', { style: 'font:700 20px var(--font-title);color:var(--gold2);margin-bottom:6px' }, d.name),
+          selected.mode === 'buy' ? h('button.btn.primary' + (g.buyPrice(selected.uid) > gold() ? '.off' : ''), { onclick: () => { sound.coin(); this.app.noteOrigin(selected.uid, bazaar.querySelector(`.pc[data-uid="${selected.uid}"]`)); this.app.act('merchantBuy', { uid: selected.uid }); selected = null; } }, 'COMPRAR ', String(g.buyPrice(selected.uid)), coinImg())
+            : h('button.btn.primary', { onclick: () => { sound.coin(); this.app.act('merchantSell', { uid: selected.uid }); selected = null; } }, 'VENDER +', String(g.sellPrice()), coinImg()),
+          selected.mode === 'buy' && emerald ? h('button.btn.quiet', { style: 'margin-left:12px', onclick: () => { this.app.act('merchantEmerald', { uid: selected.uid }); selected = null; } }, 'ESMERALDA') : null,
+          h('button.btn.quiet', { style: 'margin-left:12px', onclick: () => this.inspect({ uid: selected.uid }) }, 'VER')].filter(Boolean));
       } else bar.append(h('div', { style: 'font-style:italic;color:#cdb58a' }, 'Toca una carta del bazar para comprarla o una de las tuyas para venderla.'));
     };
-    const wrap = h('div', { style: 'position:absolute;inset:0;overflow:auto;touch-action:pan-y;padding:calc(64px + var(--sai-t)) 14px 100px' }, h('div.veil', { style: 'position:fixed' }),
-      h('div', { style: 'position:relative;max-width:1100px;margin:0 auto;text-align:center' },
+    const wrap = h('div.modal.scrolly', h('div.veil.mid', { style: 'position:fixed' }),
+      h('div.merchant-body', 
         h('div', { style: 'font:900 34px var(--font-title);color:var(--gold2);text-shadow:0 3px 6px #000' }, 'EL MERCADER'),
         h('div', { style: 'font-style:italic;color:var(--parch)' }, h('span', `Tienes ${gold()} `, coinImg(), ` · Vendes cada objeto por ${g.sellPrice()} `, coinImg())),
         h('div', { style: 'font:700 16px var(--font-title);color:var(--gold);margin-top:14px;letter-spacing:.15em' }, 'BAZAR'), bazaar,
         bar,
-        h('div', { style: 'font:700 16px var(--font-title);color:var(--gold);margin-top:14px;letter-spacing:.15em' }, 'TU EQUIPO'), mine),
-      h('div.pick-foot', { style: 'position:fixed' }, h('button.seal.pulse', { onclick: () => { sound.click(); this.app.act('leaveMerchant'); } }, 'SALIR')));
+        h('div', { style: 'font:700 16px var(--font-title);color:var(--gold);margin-top:14px;letter-spacing:.15em' }, 'TU EQUIPO'), mine,
+        h('div.m-foot', h('button.btn.primary', { onclick: () => { sound.click(); this.app.act('leaveMerchant'); } }, 'SALIR DEL BAZAR'))));
     rebuild(); this.mountPrompt(wrap);
   }
 
   /* ----------------------------------------------------------------- sobrecarga */
   showOverweight(pr) {
     const g = this.g; let selected = null;
-    const row = h('div.pickrow'); const bar = h('div', { style: 'position:absolute;left:0;right:0;bottom:calc(24px + var(--sai-b));display:flex;justify-content:center;gap:16px' });
+    const row = h('div.pickrow', { style: '--pcw:min(15vw, 30vh)' }); const bar = h('div.pick-foot');
     const rebuild = () => {
       row.innerHTML = ''; bar.innerHTML = '';
-      for (const uid of g.allItems()) { const d = g.def(uid); row.append(h('div.pc' + (selected === uid ? '.sel' : ''), { onclick: () => { sound.tap(); selected = uid; rebuild(); } }, this.faceCard(uid), h('div.price', `⚖ ${g.weightOf(uid)}`))); void d; }
-      bar.append(h('button.seal' + (selected ? '' : '.off'), { onclick: () => { if (selected) { sound.click(); this.app.act('dropOver', { uid: selected }); } } }, 'SOLTAR'));
+      for (const uid of g.allItems()) row.append(h('div.pc' + (selected === uid ? '.sel' : ''), { dataset: { uid }, onclick: () => { sound.tap(); selected = uid; rebuild(); } }, this.faceCard(uid), h('div.price', icon('weight', 14), ` ${g.weightOf(uid)}`)));
+      bar.append(h('button.btn.primary' + (selected ? '' : '.off'), { onclick: () => { if (selected) { sound.click(); this.app.act('dropOver', { uid: selected }); } } }, 'SOLTAR'));
     };
-    const el = h('div', { style: 'position:absolute;inset:0' }, h('div.veil'),
-      h('div.pick-title', 'Vas demasiado cargado'), h('div.pick-title', { style: 'top:calc(110px + var(--sai-t));font:italic 500 19px var(--font-body);color:var(--parch)' }, `Llevas ${g.weight()} de carga y tu límite es ${g.maxWeight()}. Suelta ${pr.need} o más de peso para continuar.`), row, bar);
+    const el = h('div.modal', h('div.veil.mid'), h('div.pick-head', h('div.pick-title', 'Vas demasiado cargado'),
+      h('div.pick-sub', `Llevas ${g.weight()} de carga y tu límite es ${g.maxWeight()}. Suelta ${pr.need} o más de peso para continuar.`)), h('div.pickwrap', row), bar);
     rebuild(); this.mountPrompt(el);
   }
 
@@ -135,23 +143,58 @@ export class Overlays {
     this.mountPrompt(el);
   }
 
-  /* ----------------------------------------------------------------- bazar de equipo inicial / compra de equipo */
-  showShop() {
-    const g = this.g; const inSetup = g.s.prompt?.type === 'setup';
-    const row = h('div.pickrow', { style: 'top:46%;max-height:62vh' }); let selected = null; const bar = h('div.pick-foot');
-    const rebuild = () => {
-      row.innerHTML = ''; bar.innerHTML = '';
+  /* ----------------------------------------------------------------- La Posada: equipo (y esbirros si hay expansión) */
+  showShop({ auto = false } = {}) {
+    const g = this.g; const pr = g.s.prompt; const inSetup = pr?.type === 'setup';
+    const st = (this.shopState ||= { sel: null, tab: 'gear' });
+    if (!pr?.inn) st.tab = 'gear';
+    const gold = g.s.hero.gold;
+    const head = h('div.inn-head', h('h2', 'LA POSADA'), h('div.inn-gold', h('span', 'Tu oro'), h('b', String(gold)), coinImg()));
+    const tabs = pr?.inn ? h('div.inn-tabs', ...[['gear', 'Equipo'], ['inn', 'Esbirros']].map(([id, t]) => h('button.tab' + (st.tab === id ? '.on' : ''), { onclick: () => { sound.tap(); st.tab = id; st.sel = null; this.showShop({ auto }); } }, t))) : null;
+    let body;
+    if (st.tab === 'inn' && this.renderInn) body = this.renderInn(st);
+    else {
+      const row = h('div.pickrow', { style: '--pcw:max(74px, min(8.4vw, 17.5vh))' });
       for (const uid of g.s.z.trappings) {
-        const d = g.def(uid); const can = d.price <= g.s.hero.gold;
-        row.append(h('div.pc' + (selected === d.id ? '.sel' : ''), { style: can ? '' : 'filter:grayscale(.7) brightness(.8)', onclick: () => { sound.tap(); selected = d.id; rebuild(); } }, this.faceCard(uid), h('div.price', String(d.price), coinImg(), ` · ⚖ ${d.weight}`)));
+        const d = g.def(uid); const can = d.price <= gold;
+        row.append(h('div.pc' + (st.sel === d.id ? '.sel' : '') + (can ? '' : '.poor'), { dataset: { uid }, onclick: () => { sound.tap(); st.sel = d.id; this.showShop({ auto }); }, oncontextmenu: (e) => { e.preventDefault(); this.inspect({ uid }); } },
+          this.faceCard(uid), h('div.price', String(d.price), coinImg(), h('span.w', icon('weight', 13), String(d.weight)))));
       }
-      const d = selected ? g.cat.def(selected) : null;
-      if (d) bar.append(h('button.seal.gold' + (inSetup && d.price <= g.s.hero.gold ? '' : '.off'), { onclick: async () => { sound.coin(); await this.app.act('buy', { id: d.id }); selected = null; if (this.userKind === 'shop') this.showShop(); } }, 'COMPRAR', h('br'), String(d.price), coinImg()));
-      bar.append(h('button.seal.sm', { onclick: () => this.clearUser() }, 'CERRAR'));
-    };
-    const el = h('div', { style: 'position:absolute;inset:0' }, h('div.veil'), h('div.pick-title', 'EQUIPO DE LA POSADA'),
-      h('div.pick-title', { style: 'top:calc(108px + var(--sai-t));font:italic 500 19px var(--font-body);color:var(--parch)' }, inSetup ? h('span', `Gasta tu oro inicial en más equipo (tienes ${g.s.hero.gold} `, coinImg(), ').') : 'Estas son las cartas de equipo que quedan. Solo se compran antes de entrar en la mazmorra.'), row, bar);
-    rebuild(); this.mountUser(el, 'shop');
+      if (!g.s.z.trappings.length) row.append(h('div.empty-note', 'No queda equipo por comprar.'));
+      const sel = st.sel ? g.cat.def(st.sel) : null; const selUid = sel ? g.s.z.trappings.find((u) => g.s.cards[u].id === sel.id) : null;
+      const info = h('div.inn-info', sel && selUid
+        ? [h('b', sel.name), h('span', `${sel.price} de oro · peso ${sel.weight} · ${({ MP: 'mano principal', OM: 'otra mano', '2M': 'dos manos', CP: 'cuerpo', CA: 'cabeza', AC: 'accesorio' })[sel.slot]}`),
+          h('button.btn.primary' + (inSetup && sel.price <= gold ? '' : '.off'), { onclick: () => { sound.coin(); this.app.noteOrigin(selUid, row.querySelector(`.pc[data-uid="${selUid}"]`)); st.sel = null; this.app.act('buy', { id: sel.id }, { keep: true }); } }, 'COMPRAR'),
+          h('button.btn.quiet', { onclick: () => this.inspect({ uid: selUid }) }, 'VER CARTA')]
+        : [h('span.hintline', 'Toca una carta para ver su precio. Mantén pulsado para verla grande.')]);
+      body = h('div.inn-gear', h('div.pickwrap.inline', row), info);
+    }
+    // tu equipo actual
+    const eq = g.s.eq; const owned = [['MP', eq.MP], ['OM', eq.OM], ['CA', eq.CA], ['CP', eq.CP], ...eq.AC.map((u) => ['AC', u]), ...g.s.z.hand.map((u) => ['·', u])].filter(([, u]) => u);
+    const mine = h('div.inn-mine', h('div.mine-title', 'Tu equipo ', h('small', `· carga ${g.weight()} / ${g.maxWeight()}`)),
+      h('div.mine-row', ...(owned.length ? owned.map(([slot, u]) => h('div.mini-eq', { onclick: () => this.inspect({ uid: u }) }, this.faceCard(u), h('i', slot))) : [h('span.hintline', 'Todavía no llevas nada.')])));
+    const foot = h('div.inn-foot', inSetup ? h('button.btn.primary.big', { onclick: () => { sound.click(); this.clearUser(); this.shopState = null; this.app.act('begin'); } }, 'ENTRAR EN LA MAZMORRA') : h('button.btn', { onclick: () => this.clearUser() }, 'CERRAR'));
+    const el = h('div.modal', h('div.veil.dark'), h('div.inn-panel', head, tabs, body, mine, foot));
+    this.mountUser(el, 'shop', { silent: !auto && this.userKind === 'shop' });
+  }
+
+  /* ----------------------------------------------------------------- esbirros de la Posada (Posada del Troll Solitario) */
+  renderInn(st) {
+    const g = this.g; const pr = g.s.prompt; const inn = pr?.inn; const gold = g.s.hero.gold;
+    const hired = new Set((g.s.mercs || []).map((m) => m.uid));
+    const row = h('div.pickrow', { style: '--pcw:max(80px, min(8.6vw, 17.5vh))' });
+    for (const uid of inn.candidates) {
+      const d = g.def(uid); const isHired = hired.has(uid); const can = !isHired && d.cost <= gold && hired.size < inn.max;
+      const m = (g.s.mercs || []).find((x) => x.uid === uid);
+      row.append(h('div.pc' + (st.sel === uid ? '.sel' : '') + (isHired ? '.hired' : can ? '' : '.poor'), { dataset: { uid }, onclick: () => { sound.tap(); st.sel = uid; this.showShop(); }, oncontextmenu: (e) => { e.preventDefault(); this.inspect({ uid }); } },
+        this.faceCard(uid), h('div.price', isHired ? `Moral ${m.morale}/${m.max}` : [String(d.cost), coinImg()])));
+    }
+    const sel = st.sel && inn.candidates.includes(st.sel) ? st.sel : null; const d = sel ? g.def(sel) : null; const m = sel ? (g.s.mercs || []).find((x) => x.uid === sel) : null;
+    const info = h('div.inn-info', d ? [h('b', d.name), h('span', m ? `Contratado · moral ${m.morale} de ${m.max}` : `Cuesta ${d.cost} de oro · moral inicial ${d.die}`),
+      m ? h('button.btn.primary' + (m.morale < m.max && gold >= 1 ? '' : '.off'), { onclick: () => { sound.coin(); this.app.act('payMorale', { uid: sel }, { keep: true }); } }, 'RESTAURAR MORAL (1 ORO)')
+        : h('button.btn.primary' + (!hired.has(sel) && d.cost <= gold && hired.size < inn.max ? '' : '.off'), { onclick: () => { sound.coin(); this.app.act('hire', { uid: sel }, { keep: true }); } }, 'CONTRATAR'),
+      h('button.btn.quiet', { onclick: () => this.inspect({ uid: sel }) }, 'VER CARTA')] : [h('span.hintline', `Puedes llevar hasta ${inn.max} esbirros. Cada uno ayuda en el campamento y en combate, pero pierde moral por motivos propios.`)]);
+    return h('div.inn-gear', h('div.pickwrap.inline', row), info);
   }
 
   /* ----------------------------------------------------------------- visita divina */
@@ -163,7 +206,7 @@ export class Overlays {
         h('div', { style: 'font-style:italic;font-size:21px;margin:8px 0 22px;color:var(--parch)' }, 'Un ser angelical te visita antes del combate final…'),
         h('div', { style: 'display:flex;gap:14px;justify-content:center;flex-wrap:wrap;max-width:700px;margin:0 auto' }, items.length ? items : h('div', { style: 'color:#cdb58a' }, 'No tienes fichas de bendición.')),
         h('div', { style: 'margin:22px 0;font:700 22px var(--font-title);color:var(--gold2)' }, pr.hp || pr.en || pr.cure ? `${pr.hp ? `+${pr.hp} salud  ` : ''}${pr.en ? `+${pr.en} energía  ` : ''}${pr.cure ? '· sin veneno' : ''}` : ''),
-        h('button.seal.pulse', { onclick: () => { sound.click(); this.app.act('ack'); } }, 'AL COMBATE')));
+        h('button.btn.primary', { onclick: () => { sound.click(); this.app.act('ack'); } }, 'AL COMBATE')));
     this.mountPrompt(el); sound.bless();
   }
 
@@ -175,14 +218,14 @@ export class Overlays {
       h('div', { style: 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:50px 10px 14px;pointer-events:none' },
         h('div', { style: 'position:relative;height:min(76vh,860px);aspect-ratio:480/675;max-width:92vw;filter:drop-shadow(0 20px 40px #000);pointer-events:auto;animation:rise .3s both', onclick: () => { if (!actions.length) this.closeInspector(); } },
           h('img', { src, style: 'width:100%;height:100%;border-radius:14px;pointer-events:none' })),
-        h('div', { style: 'display:flex;gap:14px;pointer-events:auto' }, ...actions.map((a) => h('button.seal' + (a.cls ? '.' + a.cls : ''), { onclick: () => { sound.click(); this.closeInspector(); a.fn(); } }, a.label)), h('button.seal.sm', { onclick: () => this.closeInspector() }, 'CERRAR'))));
+        h('div', { style: 'display:flex;gap:14px;pointer-events:auto' }, ...actions.map((a) => h('button.btn' + (a.cls ? '.' + a.cls.split(' ').join('.') : ''), { onclick: () => { sound.click(); this.closeInspector(); a.fn(); } }, a.label)), h('button.btn.quiet', { onclick: () => this.closeInspector() }, 'CERRAR'))));
     this.closeInspector(); this.inspecting = el; this.root.append(el); sound.flip();
   }
   closeInspector() { this.inspecting?.remove(); this.inspecting = null; }
 
   /* ----------------------------------------------------------------- diario */
   showJournal(tab = 'map') {
-    const g = this.g; const s = g.s; const cat = g.cat;
+    this.app._jTab = tab; const g = this.g; const s = g.s; const cat = g.cat;
     const tabs = [['map', '🗺', 'Mapa y moral'], ['plots', '📜', 'Tramas'], ['grave', '💀', 'Cementerio'], ['skills', '⚔', 'Habilidades'], ['log', '📖', 'Registro']];
     const page = h('div.page');
     const book = h('div.book', h('div.pages', page), h('div.tabs', ...tabs.map(([id, ic, t]) => h('div.tab' + (id === tab ? '.on' : ''), { title: t, onclick: () => { sound.page(); this.showJournal(id); } }, ic))), h('button.close-x', { style: 'right:-6px;top:-10px', onclick: () => { sound.click(); this.clearUser(); } }, '✕'));
@@ -223,7 +266,7 @@ export class Overlays {
     return new Promise((res) => {
       const done = (v) => { sound.click(); el.remove(); res(v); };
       const el = h('div', { style: 'position:absolute;inset:0;z-index:20' }, h('div', { style: 'position:absolute;inset:0;background:rgba(0,0,0,.72)' }),
-        h('div.sheet.scroll', h('h2', title), h('div.narr', text), h('div.btnrow', h('button.seal.gold', { onclick: () => done(true) }, yes), h('button.seal.sm', { onclick: () => done(false) }, no))));
+        h('div.sheet.scroll', h('h2', title), h('div.narr', text), h('div.btnrow', h('button.btn.primary', { onclick: () => done(true) }, yes), h('button.btn.quiet', { onclick: () => done(false) }, no))));
       this.root.append(el); sound.page();
     });
   }
@@ -231,24 +274,27 @@ export class Overlays {
   /* ----------------------------------------------------------------- ajustes y ayuda */
   showSettings() {
     const a = this.app; const st = a.settings;
-    const sw = (key, label, fn) => h('label', label, h('div.sw' + (st[key] ? '.on' : ''), { onclick: (e) => { st[key] = !st[key]; e.currentTarget.classList.toggle('on', st[key]); a.saveSettings(); fn?.(st[key]); } }));
-    const el = h('div', { style: 'position:absolute;inset:0' }, h('div', { style: 'position:absolute;inset:0;background:rgba(0,0,0,.7)', onclick: () => this.clearUser() }),
+    const sw = (key, label, fn, hintText = '') => h('label', h('span', label, hintText ? h('small', hintText) : null), h('div.sw' + (st[key] ? '.on' : ''), { onclick: (e) => { st[key] = !st[key]; e.currentTarget.classList.toggle('on', st[key]); a.saveSettings(); fn?.(st[key]); } }));
+    const el = h('div.modal', h('div.veil', { onclick: () => this.clearUser() }),
       h('div.sheet.scroll', h('h2', 'Ajustes'),
-        sw('sound', 'Sonido', (v) => sound.setMuted(!v)), sw('fast', 'Animaciones rápidas', (v) => { speed.k = v ? 0.55 : 1; }), sw('autoCam', 'Cámara automática (móvil)'), sw('captions', 'Narración de sucesos'),
-        h('div.btnrow', h('button.seal.sm', { onclick: () => { this.clearUser(); this.showHelp(); } }, 'AYUDA'), h('button.seal.sm', { onclick: () => { this.clearUser(); a.fitCamera(); } }, 'VER MESA'),
-          h('button.seal.sm.gold', { onclick: async () => { if (await this.confirm({ title: '¿Volver al menú?', text: 'La partida se guarda al inicio de cada turno y podrás continuarla desde el menú.', yes: 'AL MENÚ', no: 'SEGUIR' })) { this.clearUser(); a.leaveToMenu(); } } }, 'MENÚ')),
+        sw('sound', 'Sonido', (v) => sound.setMuted(!v)), sw('fast', 'Animaciones rápidas', (v) => { speed.k = v ? 0.55 : 1; }),
+        sw('autoReveal', 'Revelar sola la primera carta', null, 'Ahorra un toque por turno'), sw('autoDraw', 'Robar solo al empezar cada turno', null, 'Para jugar más deprisa'), sw('preShop', 'Tienda de la posada antes de entrar', null, 'Si no, empiezas directamente'),
+        sw('autoCam', 'Cámara automática en móvil'), sw('captions', 'Narración de sucesos'),
+        h('div.btnrow', h('button.btn.quiet', { onclick: () => { this.clearUser(); this.showHelp(); } }, 'AYUDA'),
+          h('button.btn', { onclick: async () => { if (await this.confirm({ title: '¿Volver al menú?', text: 'La partida se guarda al inicio de cada turno y podrás continuarla desde el menú.', yes: 'AL MENÚ', no: 'SEGUIR' })) { this.clearUser(); a.leaveToMenu(); } } }, 'MENÚ PRINCIPAL')),
         this.closeBtn(() => this.clearUser())));
     this.mountUser(el, 'settings');
   }
   showHelp() {
-    const el = h('div', { style: 'position:absolute;inset:0' }, h('div', { style: 'position:absolute;inset:0;background:rgba(0,0,0,.75)', onclick: () => this.clearUser() }),
-      h('div.sheet.scroll', { style: 'width:min(640px,94vw)' }, h('h2', 'Cómo se juega'),
+    const el = h('div.modal', h('div.veil', { onclick: () => this.clearUser() }),
+      h('div.sheet.scroll.wide', h('h2', 'Cómo se juega'),
         h('div.helpgrid',
-          h('div', h('b', '1. Explora. '), 'Toca la puerta grande para robar 2 cartas de mazmorra. Revela una: o la afrontas (parte 1) o la descartas y estás obligado a resolver la otra (parte 2).'),
-          h('div', h('b', '2. Combate. '), 'El enemigo ataca primero con 2d6 (mayor − menor, dobles = falla). Tú gastas hasta 3 de energía: un d6 por ficha. Con 0 de energía das un puñetazo de 1.'),
-          h('div', h('b', '3. Fin de nivel. '), 'Tras 8 turnos: comes una ración (o pierdes 3 de salud), el veneno crece y robas una trama. Con 10 ojos despierta el jefe.'),
-          h('div', h('b', '4. Controles. '), 'Toca o haz clic en cualquier carta para actuar. Mantén pulsado (o clic derecho) para verla grande. Arrastra la mesa y pellizca (o rueda) para acercar. ', h('kbd', 'J'), ' diario · ', h('kbd', 'I'), ' mochila · ', h('kbd', 'F'), ' ver toda la mesa · ', h('kbd', 'M'), ' sonido.')),
-        h('div.btnrow', h('button.seal.gold', { onclick: () => this.clearUser() }, 'ENTENDIDO')), this.closeBtn(() => this.clearUser())));
+          h('div', h('b', 'Explorar. '), 'Toca la puerta grande para robar 2 cartas. La primera se revela sola: o la afrontas (parte 1) o la descartas y estás obligado a resolver la otra (parte 2).'),
+          h('div', h('b', 'Combatir. '), 'El enemigo ataca primero con 2d6 (mayor − menor, dobles = falla). Tú gastas hasta 3 de energía, un d6 por ficha; sin energía das un puñetazo de 1. Toca el fieltro para lanzar los dados.'),
+          h('div', h('b', 'Fin de nivel. '), 'Tras 8 turnos comes una ración (o pierdes 3 de salud), el veneno crece y robas una trama. Con 10 ojos despierta el jefe.'),
+          h('div', h('b', 'Dos tableros. '), 'Las pestañas de abajo alternan entre la ', h('b', 'Mazmorra'), ' y el ', h('b', 'Personaje'), '. En Personaje arrastras objetos entre la mochila y las ranuras del tapete (o a SOLTAR AQUÍ). Solo se cambia de equipo entre turnos.'),
+          h('div', h('b', 'Controles. '), 'Toca cualquier carta para actuar; mantén pulsado (o clic derecho) para verla grande; toca una ficha del HUD para saber qué hace. Arrastra la mesa y pellizca (o rueda) para acercar. ', h('kbd', 'J'), ' diario · ', h('kbd', 'I'), ' mochila · ', h('kbd', '1'), '/', h('kbd', '2'), ' tableros · ', h('kbd', 'F'), ' encuadrar · ', h('kbd', 'M'), ' sonido.')),
+        h('div.btnrow', h('button.btn.primary', { onclick: () => this.clearUser() }, 'ENTENDIDO')), this.closeBtn(() => this.clearUser())));
     this.mountUser(el, 'help');
   }
 
@@ -260,7 +306,7 @@ export class Overlays {
     const scroll = h('div.scroll', h('h2', win ? '¡Victoria!' : 'Has muerto'),
       win ? h('div', h('div.narr', 'Con el jefe final derrotado, puedes colgar la espada…'), h('div.rank', sc.rank), h('table', row('Salud y energía restantes', sc.parts.hp + sc.parts.energy), row('Monedas de oro (×3)', sc.parts.gold), row('Enemigos derrotados (×2)', sc.parts.enemies), row('Valor de tus objetos', sc.parts.items), row('Nivel de mazmorra', sc.parts.level), row('Posición en el marcador de moral', sc.parts.morality), h('tr.total', h('td', 'FONDO DE JUBILACIÓN'), h('td', sc.total))), best ? h('div.narr', `Mejor puntuación: ${best}`) : null)
         : h('div', h('div.narr', over.reason), h('div.narr', `Llegaste al nivel ${g.s.level}, derrotaste ${g.s.z.graveyard.length} enemigos y ${g.s.eyes} ojos te vigilaban.`)),
-      h('div.btnrow', { style: 'display:flex;gap:14px;justify-content:center;margin-top:12px;flex-wrap:wrap' }, h('button.seal.gold', { onclick: () => this.app.leaveToMenu() }, 'MENÚ'), h('button.seal', { onclick: () => this.app.restart() }, 'OTRA', h('br'), 'VEZ'), h('button.seal.sm', { onclick: () => { this.clearUser(); this.showJournal('log'); } }, 'DIARIO')));
+      h('div.btnrow', { style: 'display:flex;gap:14px;justify-content:center;margin-top:12px;flex-wrap:wrap' }, h('button.btn', { onclick: () => this.app.leaveToMenu() }, 'MENÚ'), h('button.btn.primary', { onclick: () => this.app.restart() }, 'OTRA PARTIDA'), h('button.btn.quiet', { onclick: () => { this.clearUser(); this.showJournal('log'); } }, 'DIARIO')));
     this.clearPrompt();
     this.root.append(h('div.endscreen' + (win ? '' : '.defeat'), { id: 'endscreen' }, h('div.veil'), scroll));
     void extra;

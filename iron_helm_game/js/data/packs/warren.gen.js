@@ -2,7 +2,6 @@
 export default {
  "heroes": [
   {
-   "id": "c5",
    "kind": "hero",
    "code": "C5",
    "name": "Ozzlo",
@@ -19,12 +18,13 @@ export default {
     "Dominio del Hacha"
    ],
    "proficiency": "fuerza",
-   "pack": "warren"
+   "pack": "warren",
+   "id": "c5",
+   "key": "C5"
   }
  ],
  "bosses": [
   {
-   "id": "b4",
    "kind": "boss",
    "code": "B4",
    "name": "Cíclope",
@@ -35,12 +35,13 @@ export default {
    "weakness": "fire",
    "purse": 3,
    "text": "Si el Cíclope te inflige 9 o más de daño, rompe tu arma principal.",
-   "pack": "warren"
+   "pack": "warren",
+   "id": "b4",
+   "key": "B4"
   }
  ],
  "enemies": [
   {
-   "id": "e13",
    "kind": "enemy",
    "code": "E13",
    "name": "Grunkle",
@@ -52,6 +53,8 @@ export default {
    "treasure": 1,
    "weakness": "fire",
    "purse": 0,
+   "id": "e13",
+   "key": "E13",
    "copies": 3,
    "imgs": [
     "expansions/warren/card_002.jpg",
@@ -60,7 +63,6 @@ export default {
    ]
   },
   {
-   "id": "e14",
    "kind": "enemy",
    "code": "E14",
    "name": "Titilante",
@@ -72,6 +74,8 @@ export default {
    "treasure": 2,
    "weakness": "fire",
    "purse": 0,
+   "id": "e14",
+   "key": "E14",
    "copies": 2,
    "imgs": [
     "expansions/warren/card_005.jpg",
@@ -81,7 +85,6 @@ export default {
  ],
  "loot": [
   {
-   "id": "l18",
    "kind": "item",
    "deck": "loot",
    "code": "L18",
@@ -91,10 +94,11 @@ export default {
    "weight": 1,
    "slot": "AC",
    "text": "Cada vez que ganes botín roba dos cartas, elige una para quedártela y descarta la otra.",
-   "pack": "warren"
+   "pack": "warren",
+   "id": "l18",
+   "key": "L18"
   },
   {
-   "id": "l19",
    "kind": "item",
    "deck": "loot",
    "code": "L19",
@@ -104,10 +108,11 @@ export default {
    "weight": 1,
    "slot": "AC",
    "text": "Antes de recibir el daño inicial, puedes descartar esta carta para infligir d6 de daño a tu enemigo.",
-   "pack": "warren"
+   "pack": "warren",
+   "id": "l19",
+   "key": "L19"
   },
   {
-   "id": "l20",
    "kind": "item",
    "deck": "loot",
    "code": "L20",
@@ -117,10 +122,11 @@ export default {
    "weight": 1,
    "slot": "AC",
    "text": "Puedes descartar esta carta para ganar 2 de energía.",
-   "pack": "warren"
+   "pack": "warren",
+   "id": "l20",
+   "key": "L20"
   },
   {
-   "id": "l21",
    "kind": "enemy",
    "code": "L21",
    "name": "Mimético de Hielo",
@@ -132,13 +138,14 @@ export default {
    "treasure": 0,
    "weakness": "fire",
    "purse": 0,
-   "inLootDeck": true
+   "inLootDeck": true,
+   "id": "l21",
+   "key": "L21"
   }
  ],
  "potions": [],
  "trappings": [
   {
-   "id": "t16",
    "kind": "item",
    "deck": "trapping",
    "code": "T16",
@@ -148,10 +155,11 @@ export default {
    "weight": 1,
    "slot": "AC",
    "text": "En el Altar obtienes 2 bendiciones en vez de 1.",
-   "pack": "warren"
+   "pack": "warren",
+   "id": "t16",
+   "key": "T16"
   },
   {
-   "id": "t15",
    "kind": "item",
    "deck": "trapping",
    "code": "T15",
@@ -161,24 +169,26 @@ export default {
    "weight": 3,
    "slot": "2M",
    "text": "Los resultados de 1 infligen 6 de daño.",
-   "pack": "warren"
+   "pack": "warren",
+   "id": "t15",
+   "key": "T15"
   }
  ],
  "skills": [
   {
-   "id": "s13",
    "kind": "skill",
    "code": "S13",
    "name": "Dominio del Hacha",
    "img": "expansions/warren/card_026.jpg",
    "proficiency": "fuerza",
    "text": "Cuando uses un hacha, puedes relanzar todos los resultados de 1 o 2.",
-   "pack": "warren"
+   "pack": "warren",
+   "id": "s13",
+   "key": "S13"
   }
  ],
  "plots": [
   {
-   "id": "pt11",
    "kind": "plot",
    "code": "PT11",
    "name": "La Urna Dorada",
@@ -198,10 +208,11 @@ export default {
      "text": "Rebuscas entre los objetos dejados junto a la urna y encuentras algo que te viene bien.\nBaja un nivel en el control de moral.\nRoba 3 cartas de botín, quédate con una de ellas y descarta el resto."
     }
    ],
-   "pack": "warren"
+   "pack": "warren",
+   "id": "pt11",
+   "key": "PT11"
   },
   {
-   "id": "pt10",
    "kind": "plot",
    "code": "PT10",
    "name": "El Alquimista",
@@ -221,10 +232,11 @@ export default {
      "text": "Te frotas codiciosamente las manos antes salir huyendo con algunas de las pertenencias del ciego.\nBaja un nivel en el control de moral.\nGanas 1 de oro y una poción de tu elección del mazo de pociones."
     }
    ],
-   "pack": "warren"
+   "pack": "warren",
+   "id": "pt10",
+   "key": "PT10"
   },
   {
-   "id": "pt12",
    "kind": "plot",
    "code": "PT12",
    "name": "La Clériga",
@@ -233,17 +245,44 @@ export default {
    "narrative": "Una mujer de mediana edad y piel oscura se te acerca. Está ataviada con ropa de color gris y lleva un cayado en la mano.\nEl broche de la penitencia que sujeta su manto te hace saber que es una mujer eclesiástica. Sus ojos parecen capaces de juzgarte con una sola mirada.",
    "text": "De entre las que tengas, elimina una cantidad fichas de veneno igual a tu posición en el control de moral.\nSi tu posición en el control de moral es 3 o superior, la clériga te concede la carta de equipo Broche de la Penitencia.\nSi ya tienes el Broche de la Penitencia, independientemente de tu posición en el control de moral, la clériga te concede una poción aleatoria del mazo de pociones y una ficha de bendición.",
    "options": [],
-   "pack": "warren"
+   "pack": "warren",
+   "id": "pt12",
+   "key": "PT12"
   }
  ],
  "plotEnemies": [],
  "afflictions": [],
  "dungeon": [],
+ "environments": [],
+ "artifacts": [],
+ "mercenaries": [],
+ "adventures": [],
+ "gnome": null,
+ "rules": [],
  "meta": {
+  "backs": {},
   "intro": {
    "name": "Laberinto de la Desesperación",
    "text": "Bandas de forajidos grunkles han estado saqueando varias aldeas del norte. Se rumorea que están liderados por un enorme gigante de hielo de un solo ojo. Alguien debería investigar estos sucesos…\nRetira las siguientes cartas del juego base y sustitúyelas por las cartas de esta expansión de aventuras.\nEnemigos: Goblins, Orcos y Skinklings.\nTramas: La Anciana, El Lobo y El Cadáver.\nJefe Final: Cíclope.\nNIVEL 2",
    "img": "expansions/warren/card_000.jpg"
+  },
+  "campaign": {
+   "name": "Laberinto de la Desesperación",
+   "level": 2,
+   "removes": {
+    "enemies": [
+     "Goblins",
+     "Orcos",
+     "Skinklings"
+    ],
+    "plots": [
+     "La Anciana",
+     "El Lobo",
+     "El Cadáver"
+    ]
+   },
+   "boss": "Cíclope",
+   "adds": null
   },
   "map": "expansions/warren/card_011.jpg"
  }

@@ -1,0 +1,367 @@
+[
+  {
+    "img": "card_000.jpg",
+    "kind": "campaign",
+    "code": null,
+    "name": "El Laberinto de Galnok",
+    "text": "Conforme la luna se eleva en el oscuro cielo y aullidos de criaturas de pesadilla perduran en el aire, te encuentras con la entrada de una cueva. Tal vez un buen lugar para descansar un rato...\nRetira las siguientes cartas del juego base y sustitúyelas por las cartas de esta expansión de aventuras.\nEnemigos: Guerrero Orco, Goblins, Lobos y Peciforme.\nTramas: La Anciana, El Pasadizo y El Lobo.\nJefe Final: Galnok.\nNIVEL 2",
+    "level": 2,
+    "removes": {
+      "enemies": ["Guerrero Orco", "Goblins", "Lobos", "Peciforme"],
+      "plots": ["La Anciana", "El Pasadizo", "El Lobo"]
+    },
+    "boss": "Galnok",
+    "adds": "Sustitúyelas por las cartas de esta expansión de aventuras."
+  },
+  {
+    "img": "card_001.jpg",
+    "kind": "skill",
+    "code": "S15",
+    "name": "Sexto Sentido",
+    "proficiency": "agilidad",
+    "text": "Una vez por nivel de mazmorra puedes:\nEvitar una emboscada.\no bien\nRevelar ambas cartas de mazmorra y elegir una para resolverla."
+  },
+  {
+    "img": "card_002.jpg",
+    "kind": "trapping",
+    "code": "T19",
+    "name": "Brebaje de Hulnot",
+    "price": 2,
+    "weight": 1,
+    "slot": "AC",
+    "text": "Descarta esta carta para ganar 3 de energía."
+  },
+  {
+    "img": "card_003.jpg",
+    "kind": "trapping",
+    "code": "T21",
+    "name": "Mochila Grande",
+    "price": 2,
+    "weight": 0,
+    "slot": "AC",
+    "text": "+2 a la cantidad de equipamiento que puedes llevar.\n+1 de salud cuando descanses en el Campamento."
+  },
+  {
+    "img": "card_004.jpg",
+    "kind": "trapping",
+    "code": "T20",
+    "name": "Daga de la Luna",
+    "price": 2,
+    "weight": 1,
+    "slot": "MP",
+    "text": "Una vez por nivel de mazmorra, si llevas equipada esta daga, puedes relanzar la tirada de ataque de un enemigo."
+  },
+  {
+    "img": "card_005.jpg",
+    "kind": "loot",
+    "code": "L27",
+    "name": "Alijo de Mizlak",
+    "price": 0,
+    "weight": 0,
+    "slot": null,
+    "text": "Descártala inmediatamente para robar 1 carta de botín, 1 poción y ganar 1 ración.\no bien\nGanas d6 de oro y 1 ración.",
+    "note": "Carta de botín sin equipar (círculo azul de ranura vacío, precio 0 y peso 0): se resuelve al instante, eligiendo entre robar botín+poción+ración o ganar d6 de oro+ración."
+  },
+  {
+    "img": "card_006.jpg",
+    "kind": "loot",
+    "code": "L25",
+    "name": "Máscara de Mizlak",
+    "price": 4,
+    "weight": 1,
+    "slot": "CA",
+    "text": "Puedes evitar conflictos con cualquier enemigo no muerto con una salud base de 4 o menos."
+  },
+  {
+    "img": "card_007.jpg",
+    "kind": "loot",
+    "code": "L26",
+    "name": "Diario de Mizlak",
+    "price": 2,
+    "weight": 1,
+    "slot": "AC",
+    "text": "Descártala para revelar las 5 cartas superiores del mazo de botín. Descarta las cartas de botín que desees y, a continuación, vuelve a colocar las cartas restantes, boca abajo, en la parte superior del mazo de botín."
+  },
+  {
+    "img": "card_008.jpg",
+    "kind": "enemy",
+    "code": "E18",
+    "name": "Vidente de la Muerte",
+    "health": 7,
+    "damage": 2,
+    "treasure": 2,
+    "weakness": "undead",
+    "purse": 1,
+    "text": "El Vidente de la Muerte es inmune a las pociones.",
+    "note": "Segunda copia de E18 (imagen idéntica a #018). Es una carta de ENEMIGO (borde rojo, código E): va al mazo de enemigos, no al de botín."
+  },
+  {
+    "img": "card_009.jpg",
+    "kind": "divider",
+    "code": null,
+    "name": "EQUIPO",
+    "deck": "trappings"
+  },
+  {
+    "img": "card_010.jpg",
+    "kind": "divider",
+    "code": null,
+    "name": "HABILIDADES",
+    "deck": "skills"
+  },
+  {
+    "img": "card_011.jpg",
+    "kind": "map",
+    "code": null,
+    "name": null,
+    "rooms": [
+      {"n": 1, "icon": "sala de entrada (flecha roja de entrada a la izquierda); marcas circulares rojas en la sala"},
+      {"n": 2, "icon": "icono de hacha/pico"},
+      {"n": 3, "icon": "sala con río; sin icono visible"},
+      {"n": 4, "icon": "esqueleto con espada y escudo"},
+      {"n": 5, "icon": "sala grande con sarcófago/altar y dos marcas circulares rojas"}
+    ],
+    "note": "Mapa de la aventura sin título impreso (salas rojas 1-5 con flecha de entrada y un río); el nivel 2 sale de la carta de campaña #000, no está impreso en el mapa."
+  },
+  {
+    "img": "card_012.jpg",
+    "kind": "divider",
+    "code": null,
+    "name": "BOTÍN",
+    "deck": "loot"
+  },
+  {
+    "img": "card_013.jpg",
+    "kind": "divider",
+    "code": null,
+    "name": "EQUIPO",
+    "deck": "trappings"
+  },
+  {
+    "img": "card_014.jpg",
+    "kind": "divider",
+    "code": null,
+    "name": "EQUIPO",
+    "deck": "trappings"
+  },
+  {
+    "img": "card_015.jpg",
+    "kind": "divider",
+    "code": null,
+    "name": "ENEMIGOS",
+    "deck": "enemies"
+  },
+  {
+    "img": "card_016.jpg",
+    "kind": "divider",
+    "code": null,
+    "name": "BOTÍN",
+    "deck": "loot"
+  },
+  {
+    "img": "card_017.jpg",
+    "kind": "divider",
+    "code": null,
+    "name": "BOTÍN",
+    "deck": "loot"
+  },
+  {
+    "img": "card_018.jpg",
+    "kind": "enemy",
+    "code": "E18",
+    "name": "Vidente de la Muerte",
+    "health": 7,
+    "damage": 2,
+    "treasure": 2,
+    "weakness": "undead",
+    "purse": 1,
+    "text": "El Vidente de la Muerte es inmune a las pociones."
+  },
+  {
+    "img": "card_019.jpg",
+    "kind": "enemy",
+    "code": "E17",
+    "name": "Calavera Flotante",
+    "health": 5,
+    "damage": 2,
+    "treasure": 1,
+    "weakness": "undead",
+    "purse": 0,
+    "text": "Cuando derrotes a la Calavera Flotante, sube un nivel en el control de moral."
+  },
+  {
+    "img": "card_020.jpg",
+    "kind": "enemy",
+    "code": "E17",
+    "name": "Calavera Flotante",
+    "health": 5,
+    "damage": 2,
+    "treasure": 1,
+    "weakness": "undead",
+    "purse": 0,
+    "text": "Cuando derrotes a la Calavera Flotante, sube un nivel en el control de moral."
+  },
+  {
+    "img": "card_021.jpg",
+    "kind": "enemy",
+    "code": "E17",
+    "name": "Calavera Flotante",
+    "health": 5,
+    "damage": 2,
+    "treasure": 1,
+    "weakness": "undead",
+    "purse": 0,
+    "text": "Cuando derrotes a la Calavera Flotante, sube un nivel en el control de moral."
+  },
+  {
+    "img": "card_022.jpg",
+    "kind": "boss",
+    "code": "B6",
+    "name": "Galnok",
+    "health": 20,
+    "damage": 2,
+    "treasure": 2,
+    "weakness": "undead",
+    "purse": 3,
+    "text": "Si Galnok obtiene resultados dobles, te impacta por el valor indicado en uno de los dados."
+  },
+  {
+    "img": "card_023.jpg",
+    "kind": "hero",
+    "code": "C7",
+    "name": "Azzlar",
+    "health": 12,
+    "energy": 12,
+    "encumbrance": 8,
+    "rations": 2,
+    "gold": 4,
+    "trappings": "Daga de la Luna",
+    "skill": "Sexto Sentido",
+    "proficiency": "agilidad"
+  },
+  {
+    "img": "card_024.jpg",
+    "kind": "plot",
+    "code": "PT16",
+    "name": "El Agresor",
+    "eyes": 1,
+    "narrative": "Oyes un leve crujido detrás tuya y te giras justo en el momento en el que algo duro te golpea en la cara.\nPierdes 1 de salud. Si sigues vivo, continúa leyendo...\nRetrocedes tambaleándote y parpadeando mientras un joven desaliñado, blandiendo una gran roca, se abalanza sobre ti para asestarte otro golpe. Le desarmas fácilmente y le tiras al suelo. Mientras balbucea incoherencias, levantas la roca por encima de tu cabeza para golpearle mientras lo contemplas. Parece que lleva semanas perdido aquí abajo.",
+    "options": [
+      {
+        "prompt": "¿Terminar el trabajo?",
+        "text": "Rebuscas en los bolsillos del cadáver.\nGanas 2 de oro."
+      },
+      {
+        "prompt": "¿Mostrar Piedad?",
+        "text": "Tiras la piedra a un lado y señalas la salida al joven antes de dejarlo atrás.\nSube un nivel en el control de moral.\nGanas 1 ficha de bendición."
+      }
+    ]
+  },
+  {
+    "img": "card_025.jpg",
+    "kind": "plot",
+    "code": "PT18",
+    "name": "Comida Sospechosa",
+    "eyes": 2,
+    "narrative": "Un olor avinagrado te conduce hasta un hombre demacrado que cocina algo en una olla pequeña y oxidada. Te hace señas para que te acerques y te explica que no está seguro de que las setas que ha encontrado sean comestibles, pero que tiene suficiente hambre como para arriesgarse. Te invita a sentarte con él y señala la olla. \"Sírvete, amigo\".",
+    "options": [
+      {
+        "prompt": "¿Rehusar?",
+        "text": "Le deseas buena suerte y continúas tu camino."
+      },
+      {
+        "prompt": "¿Comer un tazón de sopa de setas?",
+        "text": "Lanza un dado:\nPar: Recuperas 2 de energía.\nImpar: Recuperas 1 energía y ganas 1 de veneno."
+      },
+      {
+        "prompt": "¿Dar comida al hombre?",
+        "text": "Para evitar riesgos, le das una patada a la olla y ofreces al hombre una ración de comida.\nPierdes 1 ración, pero ganas 1 ficha de bendición.\nSube un nivel en el control de moral."
+      }
+    ]
+  },
+  {
+    "img": "card_026.jpg",
+    "kind": "plot",
+    "code": "PT17",
+    "name": "Venganza",
+    "eyes": 1,
+    "narrative": "Te encuentras con una mujer de mediana edad apoyada contra un muro y masajeándose el muñón donde antes tenía la mano izquierda. Señalas con un gesto de curiosidad la extremidad mermada y ella te explica que ha regresado a este sitio para encontrar y matar al responsable: un despiadado monstruo que se asemeja al cofre de un tesoro.",
+    "options": [
+      {
+        "prompt": "¿Aprender a detectar a un mimético?",
+        "text": "La Mujer te dice que, a cambio de 2 monedas de oro, te enseñará un truco para detectar fácilmente a un mimético normal. Si aceptas su oferta, puedes buscar en el mazo de botín, retirar al mimético de la partida y, a continuación, volver a barajar el mazo de botín."
+      },
+      {
+        "prompt": "¿Rehusar?",
+        "text": "Te mofas de su oferta y te marchas ofendido."
+      },
+      {
+        "prompt": "¿Has derrotado ya al mimético?",
+        "text": "Si ya has derrotado al mimético, la mujer te paga 2 monedas de oro cuando le cuentas la historia del encuentro y el lugar donde ocurrió."
+      }
+    ]
+  },
+  {
+    "img": "card_027.jpg",
+    "kind": "divider",
+    "code": null,
+    "name": "ENEMIGOS",
+    "deck": "enemies"
+  },
+  {
+    "img": "card_028.jpg",
+    "kind": "divider",
+    "code": null,
+    "name": "ENEMIGOS",
+    "deck": "enemies"
+  },
+  {
+    "img": "card_029.jpg",
+    "kind": "divider",
+    "code": null,
+    "name": "ENEMIGOS",
+    "deck": "enemies"
+  },
+  {
+    "img": "card_030.jpg",
+    "kind": "divider",
+    "code": null,
+    "name": "PERSONAJES",
+    "deck": "heroes"
+  },
+  {
+    "img": "card_031.jpg",
+    "kind": "divider",
+    "code": null,
+    "name": "JEFES FINALES",
+    "deck": "bosses"
+  },
+  {
+    "img": "card_032.jpg",
+    "kind": "divider",
+    "code": null,
+    "name": "ENEMIGOS",
+    "deck": "enemies"
+  },
+  {
+    "img": "card_033.jpg",
+    "kind": "divider",
+    "code": null,
+    "name": "TRAMAS",
+    "deck": "plots"
+  },
+  {
+    "img": "card_034.jpg",
+    "kind": "divider",
+    "code": null,
+    "name": "TRAMAS",
+    "deck": "plots"
+  },
+  {
+    "img": "card_035.jpg",
+    "kind": "divider",
+    "code": null,
+    "name": "TRAMAS",
+    "deck": "plots"
+  }
+]

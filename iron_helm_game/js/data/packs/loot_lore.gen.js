@@ -2,7 +2,6 @@
 export default {
  "heroes": [
   {
-   "id": "c12",
    "kind": "hero",
    "code": "C12",
    "name": "Azra",
@@ -19,10 +18,11 @@ export default {
     "Entereza"
    ],
    "proficiency": "agilidad",
-   "pack": "loot_lore"
+   "pack": "loot_lore",
+   "id": "c12",
+   "key": "C12"
   },
   {
-   "id": "c14",
    "kind": "hero",
    "code": "C14",
    "name": "Kiln-Olma",
@@ -39,10 +39,11 @@ export default {
     "Artes Marciales"
    ],
    "proficiency": "mente",
-   "pack": "loot_lore"
+   "pack": "loot_lore",
+   "id": "c14",
+   "key": "C14"
   },
   {
-   "id": "c13",
    "kind": "hero",
    "code": "C13",
    "name": "Skral",
@@ -60,14 +61,15 @@ export default {
     "Cazadora de Tesoros"
    ],
    "proficiency": "fuerza",
-   "pack": "loot_lore"
+   "pack": "loot_lore",
+   "id": "c13",
+   "key": "C13"
   }
  ],
  "bosses": [],
  "enemies": [],
  "loot": [
   {
-   "id": "l29",
    "kind": "item",
    "deck": "loot",
    "code": "L29",
@@ -77,10 +79,11 @@ export default {
    "weight": 0,
    "slot": "AC",
    "text": "Descarta esta carta mientras comercias con el comerciante para ganar cualquier objeto que esté vendiendo.",
-   "pack": "loot_lore"
+   "pack": "loot_lore",
+   "id": "l29",
+   "key": "L29"
   },
   {
-   "id": "l30",
    "kind": "item",
    "deck": "loot",
    "code": "L30",
@@ -90,10 +93,11 @@ export default {
    "weight": 0,
    "slot": "AC",
    "text": "Cuando se te pida robar una carta de trama, descarta la Moneda del Destino para robar 2. Elige una y descarta la otra.",
-   "pack": "loot_lore"
+   "pack": "loot_lore",
+   "id": "l30",
+   "key": "L30"
   },
   {
-   "id": "l28",
    "kind": "item",
    "deck": "loot",
    "code": "L28",
@@ -103,12 +107,13 @@ export default {
    "weight": 2,
    "slot": "MP",
    "text": "Cuando luches contra un enemigo no muerto y saques resultados dobles, añade +4 a la suma de tu ataque.",
-   "pack": "loot_lore"
+   "pack": "loot_lore",
+   "id": "l28",
+   "key": "L28"
   }
  ],
  "potions": [
   {
-   "id": "p6",
    "kind": "item",
    "deck": "potion",
    "code": "P6",
@@ -119,6 +124,8 @@ export default {
    "slot": "AC",
    "text": "Puedes descartar esta carta para ganar 2 de energía.",
    "pack": "loot_lore",
+   "id": "p6",
+   "key": "P6",
    "copies": 2,
    "imgs": [
     "expansions/loot_lore/card_007.jpg",
@@ -128,7 +135,6 @@ export default {
  ],
  "trappings": [
   {
-   "id": "t23",
    "kind": "item",
    "deck": "trapping",
    "code": "T23",
@@ -138,10 +144,11 @@ export default {
    "weight": 1,
    "slot": "AC",
    "text": "Descarta esta carta para ganar 2 de energía y 2 de salud.",
-   "pack": "loot_lore"
+   "pack": "loot_lore",
+   "id": "t23",
+   "key": "T23"
   },
   {
-   "id": "t21",
    "kind": "item",
    "deck": "trapping",
    "code": "T21",
@@ -151,10 +158,11 @@ export default {
    "weight": 3,
    "slot": "2M",
    "text": "Siempre que saques resultados dobles en combate, añade +3 de daño a la suma final.",
-   "pack": "loot_lore"
+   "pack": "loot_lore",
+   "id": "t21",
+   "key": "T21"
   },
   {
-   "id": "t22",
    "kind": "item",
    "deck": "trapping",
    "code": "T22",
@@ -164,44 +172,48 @@ export default {
    "weight": 1,
    "slot": "OM",
    "text": "Una vez por nivel de mazmorra, puedes repetir TODOS tus dados de combate.",
-   "pack": "loot_lore"
+   "pack": "loot_lore",
+   "id": "t22",
+   "key": "T22"
   }
  ],
  "skills": [
   {
-   "id": "s16",
    "kind": "skill",
    "code": "S16",
    "name": "Entereza",
    "img": "expansions/loot_lore/card_024.jpg",
    "proficiency": "fuerza",
    "text": "Ganas +1 de salud cada vez que bebas una poción de salud.\nYa no aumentas tu nivel de veneno al final de un Nivel de mazmorra.",
-   "pack": "loot_lore"
+   "pack": "loot_lore",
+   "id": "s16",
+   "key": "S16"
   },
   {
-   "id": "s18",
    "kind": "skill",
    "code": "S18",
    "name": "Artes Marciales",
    "img": "expansions/loot_lore/card_025.jpg",
    "proficiency": "agilidad",
    "text": "No necesitas un arma de mano para lanzar dados en combate.\nEn un combate, tus ataques con los puños infligen 2 de daño en vez de 1.",
-   "pack": "loot_lore"
+   "pack": "loot_lore",
+   "id": "s18",
+   "key": "S18"
   },
   {
-   "id": "s17",
    "kind": "skill",
    "code": "S17",
    "name": "Cazadora de Tesoros",
    "img": "expansions/loot_lore/card_026.jpg",
    "proficiency": "mente",
    "text": "Cada vez que ganes una moneda de oro por derrotar a un enemigo, ganas también 1 de energía.",
-   "pack": "loot_lore"
+   "pack": "loot_lore",
+   "id": "s17",
+   "key": "S17"
   }
  ],
  "plots": [
   {
-   "id": "pt20",
    "kind": "plot",
    "code": "PT20",
    "name": "En Situación Extrema",
@@ -221,10 +233,11 @@ export default {
      "text": "Decides dejar que el cerdo se defienda solo. Mientras te alejas sigilosamente por el siguiente pasadizo, oyes un fuerte grito seguido de un sepulcral silencio...\nBaja 1 nivel en el control de moral."
     }
    ],
-   "pack": "loot_lore"
+   "pack": "loot_lore",
+   "id": "pt20",
+   "key": "PT20"
   },
   {
-   "id": "pt19",
    "kind": "plot",
    "code": "PT19",
    "name": "El Abismo",
@@ -244,10 +257,11 @@ export default {
      "text": "Te corroe la codicia y decides saquear el contenido de la mochila.\nGanas 1 ración y 1 carta de botín aleatoria.\nBaja 1 nivel en el control de moral."
     }
    ],
-   "pack": "loot_lore"
+   "pack": "loot_lore",
+   "id": "pt19",
+   "key": "PT19"
   },
   {
-   "id": "pt21",
    "kind": "plot",
    "code": "PT21",
    "name": "El Pozo",
@@ -267,13 +281,22 @@ export default {
      "text": "Decides que es mejor no arriesgarse y sigues tu camino."
     }
    ],
-   "pack": "loot_lore"
+   "pack": "loot_lore",
+   "id": "pt21",
+   "key": "PT21"
   }
  ],
  "plotEnemies": [],
  "afflictions": [],
  "dungeon": [],
+ "environments": [],
+ "artifacts": [],
+ "mercenaries": [],
+ "adventures": [],
+ "gnome": null,
+ "rules": [],
  "meta": {
+  "backs": {},
   "intro": {
    "name": "Botín y Leyendas",
    "text": "Botín y Leyendas es una expansión para el juego base de Iron Helm, diseñada para complementar el juego principal. Simplemente, añade todas las cartas de esta expansión a sus mazos correspondientes. Más tarde, si deseas volver a su estado original, podrás retirar estas cartas con facilidad gracias a los iconos situados en las esquinas superior izquierda y derecha para diferenciarlas del resto.\nBotín y Leyendas añade más variedad a las partidas y las ajusta ligeramente en algunos aspectos que dejaremos que descubras por ti mismo.\nEl Troll Solitario\nEn el reverso de esta carta podrás encontrar una referencia a la posada del Troll Solitario. Podrás descansar en ella cuando derrotes a un jefe final, completando una aventura, y quieras continuar con otra. En la carta se indica cómo restaurar tu personaje y, además, ofrece un par de opciones de compra y venta para realizar entre aventuras.",

@@ -1,0 +1,246 @@
+[
+  {
+    "img": "card_000.jpg",
+    "kind": "campaign",
+    "code": null,
+    "name": "Cavernas de Cristal",
+    "text": "Apenas puedes sentir tus manos y tu cara, congeladas, cuando por fin llegas a la entrada de las inaccesibles Cavernas de Cristal. Los rumores cuentan que en ellas se pueden encontrar grandes fortunas y terribles peligros.\nRetira las siguientes cartas del juego base y sustitúyelas por las cartas de esta expansión de aventuras.\nEnemigos: Skinklings, Zombies, Lobos y Peciforme.\nTramas: El Santuario, El Pasadizo y El Hombre Cerdo.\nJefe Final: Dragón de Cristal.\nNIVEL 3",
+    "level": 3,
+    "removes": {
+      "enemies": ["Skinklings", "Zombies", "Lobos", "Peciforme"],
+      "plots": ["El Santuario", "El Pasadizo", "El Hombre Cerdo"]
+    },
+    "boss": "Dragón de Cristal",
+    "adds": "Sustituir las cartas retiradas por las cartas de esta expansión de aventuras (enemigos, tramas y jefe final de Cavernas de Cristal)"
+  },
+  {
+    "img": "card_001.jpg",
+    "kind": "hero",
+    "code": "C8",
+    "name": "Brazwitz",
+    "health": 13,
+    "energy": 11,
+    "encumbrance": 10,
+    "rations": 1,
+    "gold": 2,
+    "trappings": "Capa de Lana y Espada Enana",
+    "skill": "Estrategia",
+    "proficiency": "mente"
+  },
+  {
+    "img": "card_002.jpg",
+    "kind": "boss",
+    "code": "B7",
+    "name": "Dragón de Cristal",
+    "health": 23,
+    "damage": 5,
+    "treasure": 2,
+    "weakness": "fire",
+    "purse": 3,
+    "text": "Si el Dragón de Cristal te inflige 8 o más puntos de daño, destruye 1 de tus objetos equipados. Tú eliges cual."
+  },
+  {
+    "img": "card_003.jpg",
+    "kind": "enemy",
+    "code": "E20",
+    "name": "Blizzling",
+    "health": 5,
+    "damage": 1,
+    "treasure": 1,
+    "weakness": "fire",
+    "purse": 1,
+    "text": "Si el Blizzling te inflige 3 o más puntos de daño, ganas 1 de veneno."
+  },
+  {
+    "img": "card_004.jpg",
+    "kind": "enemy",
+    "code": "E20",
+    "name": "Blizzling",
+    "health": 5,
+    "damage": 1,
+    "treasure": 1,
+    "weakness": "fire",
+    "purse": 1,
+    "text": "Si el Blizzling te inflige 3 o más puntos de daño, ganas 1 de veneno."
+  },
+  {
+    "img": "card_005.jpg",
+    "kind": "enemy",
+    "code": "E20",
+    "name": "Blizzling",
+    "health": 5,
+    "damage": 1,
+    "treasure": 1,
+    "weakness": "fire",
+    "purse": 1,
+    "text": "Si el Blizzling te inflige 3 o más puntos de daño, ganas 1 de veneno."
+  },
+  {
+    "img": "card_006.jpg",
+    "kind": "enemy",
+    "code": "E20",
+    "name": "Blizzling",
+    "health": 5,
+    "damage": 1,
+    "treasure": 1,
+    "weakness": "fire",
+    "purse": 1,
+    "text": "Si el Blizzling te inflige 3 o más puntos de daño, ganas 1 de veneno."
+  },
+  {
+    "img": "card_007.jpg",
+    "kind": "enemy",
+    "code": "E19",
+    "name": "Cubo de Hielo",
+    "health": 8,
+    "damage": 3,
+    "treasure": 2,
+    "weakness": "fire",
+    "purse": 0,
+    "text": "El Cubo de Hielo no falla el ataque cuando obtiene resultados dobles."
+  },
+  {
+    "img": "card_008.jpg",
+    "kind": "plot",
+    "code": "PT22",
+    "name": "El Huraño",
+    "eyes": 1,
+    "narrative": "En el claro ves a un personaje que va de un lado a otro frotándose las manos. Al observarlo más de cerca, oyes que murmura maldiciones para sí mismo. Se fija en ti y te dice en tono áspero: \"¡Déjame en paz! Estoy maldito\".",
+    "options": [
+      {
+        "prompt": "¿Hacer compañía al desamparado?",
+        "text": "Calmas al hombre y te ofreces algo de comida para compartir juntos. Ambos os sentáis un rato. El hombre habla poco pero come con ansia. Cuando os separáis, te das cuenta de que sigue sentado y ya no murmura.\nPierdes 1 ración.\nSube dos niveles en el control de moral."
+      },
+      {
+        "prompt": "¿Dejar en paz al hombre?",
+        "text": "Ni ganas ni pierdes nada dejando atrás al hombre."
+      },
+      {
+        "prompt": "¿Robar al hombre?",
+        "text": "Intimidas al hombre y le obligas a vaciar sus bolsillos.\nGanas 1 poción.\nBaja dos niveles en el control de moral."
+      }
+    ]
+  },
+  { "img": "card_009.jpg", "kind": "divider", "code": null, "name": "Jefes Finales", "deck": "bosses" },
+  { "img": "card_010.jpg", "kind": "divider", "code": null, "name": "Personajes", "deck": "heroes" },
+  { "img": "card_011.jpg", "kind": "map", "code": null, "name": "Mapa" },
+  { "img": "card_012.jpg", "kind": "divider", "code": null, "name": "Enemigos", "deck": "enemies" },
+  { "img": "card_013.jpg", "kind": "divider", "code": null, "name": "Enemigos", "deck": "enemies" },
+  { "img": "card_014.jpg", "kind": "divider", "code": null, "name": "Enemigos", "deck": "enemies" },
+  { "img": "card_015.jpg", "kind": "divider", "code": null, "name": "Tramas", "deck": "plots" },
+  { "img": "card_016.jpg", "kind": "divider", "code": null, "name": "Enemigos", "deck": "enemies" },
+  { "img": "card_017.jpg", "kind": "divider", "code": null, "name": "Enemigos", "deck": "enemies" },
+  {
+    "img": "card_018.jpg",
+    "kind": "plot",
+    "code": "PT23",
+    "name": "El Pináculo de Marfil",
+    "eyes": 3,
+    "narrative": "En el claro se alza un imponente pináculo de marfil que sobresale por la abertura del techo de la caverna y se pierde en el oscuro cielo nocturno. Sientes un deseo irrefrenable de tocarlo. Te acercas y extiendes la mano...",
+    "options": [
+      {
+        "prompt": "Si el control de moral está en positivo...",
+        "text": "Sientes una descarga eléctrica procedente del pináculo que te hace caer al suelo.\nGanas una cantidad de fichas de bendición igual a tu posición en el control de moral."
+      },
+      {
+        "prompt": "Si el control de moral está en negativo...",
+        "text": "Sientes una descarga que te hace caer de espaldas y escuchas un fuerte estruendo detrás tuya. Te giras y ves como una puerta mágica se ha abierto y un enemigo emerge del otro lado. La puerta se cierra...\n¡Es hora de luchar!\nRoba una carta de enemigo. Suma 3 al daño inicial que te inflige y 6 a su salud."
+      }
+    ]
+  },
+  {
+    "img": "card_019.jpg",
+    "kind": "plot",
+    "code": "PT24",
+    "name": "El Viejo Libro",
+    "eyes": 2,
+    "narrative": "En el claro te encuentras con un cubo de mármol de medidas perfectas y de una altura ligeramente más baja que la tuya. Encima del cubo descansa un gran libro cuyas páginas pasan solas, como si una ligera brisa las pasara.",
+    "options": [
+      {
+        "prompt": "¿Intentas acercarte al libro?",
+        "text": "Te encaminas hacia el libro. Al dar unos pasos sientes como el suelo se hunde. ¡UNA TRAMPA! Un gran péndulo afilado hace un movimiento de balanceo y recibes 2 de daño. Con máximo cuidado, te sigues acercando al libro.\nLas páginas del libro están en blanco pero, de alguna manera inexplicable, sientes como si acabaras de leer una docena de ellos.\nGanas 1 habilidad aleatoria."
+      },
+      {
+        "prompt": "¡La lectura es para tontos!",
+        "text": "Atraviesas el claro sin acercarte al enorme cubo, pegando tu trasero al muro exterior, abriéndote paso hasta el pasadizo del otro lado.\nNo ocurre nada."
+      }
+    ]
+  },
+  {
+    "img": "card_020.jpg",
+    "kind": "loot",
+    "code": "L33",
+    "name": "El Cetro",
+    "price": 7,
+    "weight": 2,
+    "slot": "MP",
+    "text": "Cuando tengas que robar una carta de enemigo, roba dos, elige una y, a continuación, descarta la otra."
+  },
+  {
+    "img": "card_021.jpg",
+    "kind": "loot",
+    "code": "L31",
+    "name": "Mortero y Maja",
+    "price": 3,
+    "weight": 2,
+    "slot": "AC",
+    "text": "Ganas +1 de salud cuando bebas una poción de salud e infliges +2 de daño cuando uses una poción para atacar."
+  },
+  {
+    "img": "card_022.jpg",
+    "kind": "loot",
+    "code": "L34",
+    "name": "Excremento de Troll",
+    "price": 0,
+    "weight": 1,
+    "slot": "AC",
+    "text": "¡A veces pasa!"
+  },
+  {
+    "img": "card_023.jpg",
+    "kind": "loot",
+    "code": "L32",
+    "name": "Sello de Zogar",
+    "price": 5,
+    "weight": 1,
+    "slot": "AC",
+    "text": "Una vez por nivel de mazmorra, puedes mirar todas las cartas del descarte del mazo de Mazmorra."
+  },
+  {
+    "img": "card_024.jpg",
+    "kind": "trapping",
+    "code": "T24",
+    "name": "Capa de Lana",
+    "price": 1,
+    "weight": 1,
+    "slot": "AC",
+    "text": "Una vez por nivel de mazmorra, puedes restar 1 de daño a un ataque inicial."
+  },
+  {
+    "img": "card_025.jpg",
+    "kind": "trapping",
+    "code": "T25",
+    "name": "Espada Enana",
+    "price": 3,
+    "weight": 2,
+    "slot": "MP",
+    "text": "Añade +2 a la suma de tu tirada de ataque contra enemigos goblins, orcos o trolls."
+  },
+  {
+    "img": "card_026.jpg",
+    "kind": "skill",
+    "code": "S19",
+    "name": "Estrategia",
+    "proficiency": "mente",
+    "text": "Después de realizar tu tirada de ataque, puedes gastar 1 de energía adicional para relanzar todos los dados, pero debes utilizar el nuevo resultado obtenido."
+  },
+  { "img": "card_027.jpg", "kind": "divider", "code": null, "name": "Botín", "deck": "loot" },
+  { "img": "card_028.jpg", "kind": "divider", "code": null, "name": "Tramas", "deck": "plots" },
+  { "img": "card_029.jpg", "kind": "divider", "code": null, "name": "Tramas", "deck": "plots" },
+  { "img": "card_030.jpg", "kind": "divider", "code": null, "name": "Botín", "deck": "loot" },
+  { "img": "card_031.jpg", "kind": "divider", "code": null, "name": "Botín", "deck": "loot" },
+  { "img": "card_032.jpg", "kind": "divider", "code": null, "name": "Botín", "deck": "loot" },
+  { "img": "card_033.jpg", "kind": "divider", "code": null, "name": "Habilidades", "deck": "skills" },
+  { "img": "card_034.jpg", "kind": "divider", "code": null, "name": "Equipo", "deck": "trappings" },
+  { "img": "card_035.jpg", "kind": "divider", "code": null, "name": "Equipo", "deck": "trappings" }
+]

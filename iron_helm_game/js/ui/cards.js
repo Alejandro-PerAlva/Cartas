@@ -29,7 +29,8 @@ export const backOfDeck = (name) => cardPath(BACKS[name] || BACKS.dungeon);
  */
 export function cardEl({ front, back, up = false, cls = '', title = '' }) {
   const f = front && !front.startsWith('assets/') ? cardPath(front) : front;
-  const el = h('div.card' + (up ? '.up' : '') + (cls ? '.' + cls.split(' ').join('.') : ''), { title },
+  const extra = String(cls || '').split(/\s+/).filter(Boolean).map((c) => '.' + c).join('');
+  const el = h('div.card' + (up ? '.up' : '') + extra, { title },
     h('div.card-in',
       h('div.face.back', h('img', { src: back, alt: '', draggable: 'false' })),
       h('div.face.front', f ? h('img', { src: f, alt: '', draggable: 'false' }) : null)));

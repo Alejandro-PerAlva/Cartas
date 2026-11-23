@@ -137,14 +137,14 @@ export class Arena {
       case 'pre': {
         this.say('Antes del primer golpe puedes actuar…');
         pr.options.forEach((o, i) => this.choices.append(plaque(i + 1, o.label, o.text, () => this.app.act('preUse', { id: o.id }))));
-        this.seals.append(h('button.seal.pulse', { onclick: () => { sound.click(); this.app.act('proceed'); } }, '¡A LUCHAR!'));
+        this.seals.append(h('button.btn.primary.big', { onclick: () => { sound.click(); this.app.act('proceed'); } }, '¡A LUCHAR!'));
         break;
       }
       case 'attack': this._attackUi(pr); break;
       case 'postRoll': {
         this.say(`Dados: ${pr.dice.join(' · ')} → ${pr.preview} de daño`);
         pr.options.forEach((o, i) => this.choices.append(plaque(i + 1, o.label, '', () => this.app.act('reroll', { id: o.id }))));
-        this.seals.append(h('button.seal.gold.pulse', { onclick: () => { sound.click(); this.app.act('accept'); } }, 'ACEPTAR', h('br'), `${pr.preview} daño`));
+        this.seals.append(h('button.btn.primary.big', { onclick: () => { sound.click(); this.app.act('accept'); } }, 'ACEPTAR', h('br'), `${pr.preview} daño`));
         break;
       }
       case 'enemyRoll': {
@@ -174,9 +174,9 @@ export class Arena {
     for (const o of pr.specials) mini(o.uid, o.label, () => this.app.act('special', { id: o.id }), o.uid != null ? g.img(o.uid) : '');
     for (const u of g.s.eq.AC) { const d = g.def(u); if (USABLE.has(d.code)) mini(u, `Usar ${d.name}`, () => this.app.act('use', { uid: u }), g.img(u)); }
     // opciones de dado extra
-    if (pr.furia) this.seals.append(h('button.seal.sm' + (this.furia ? '.gold' : ''), { onclick: (e) => { e.stopPropagation(); this.furia = !this.furia; sound.token(); this.setPrompt(pr); this._restDice(); } }, 'FURIA', h('br'), '−2❤ +1🎲'));
-    if (pr.mandoble) this.seals.append(h('button.seal.sm' + (this.mandoble ? '.gold' : ''), { onclick: (e) => { e.stopPropagation(); this.mandoble = !this.mandoble; sound.token(); this.setPrompt(pr); this._restDice(); } }, 'MANDOBLE', h('br'), '−1🪙 +1🎲'));
-    this._sealBtn = h('button.seal.pulse', { onclick: (e) => { e.stopPropagation(); this._doAttack(); } });
+    if (pr.furia) this.seals.append(h('button.btn.quiet' + (this.furia ? '.on' : ''), { onclick: (e) => { e.stopPropagation(); this.furia = !this.furia; sound.token(); this.setPrompt(pr); this._restDice(); } }, 'FURIA', h('br'), '−2❤ +1🎲'));
+    if (pr.mandoble) this.seals.append(h('button.btn.quiet' + (this.mandoble ? '.on' : ''), { onclick: (e) => { e.stopPropagation(); this.mandoble = !this.mandoble; sound.token(); this.setPrompt(pr); this._restDice(); } }, 'MANDOBLE', h('br'), '−1🪙 +1🎲'));
+    this._sealBtn = h('button.btn.primary.big', { onclick: (e) => { e.stopPropagation(); this._doAttack(); } });
     this.seals.prepend(this._sealBtn); this._sealRefresh();
     this._restDice();
   }

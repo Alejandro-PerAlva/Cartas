@@ -19,52 +19,49 @@ node tools/serve.mjs 8123      # http://localhost:8123
 No necesita instalar nada para jugar. `app.bundle.js` va incluido en el repositorio.
 
 ### Cómo se juega
-1. **Elige héroe y aventura** en el menú: juego base, una campaña (Warren of Despair, Blackened Burrow) y los
-   módulos que quieras (Loot & Lore, The Fanny Pack, Beasts & Burdens).
-2. **Prepara la partida**: gasta tu oro inicial en equipo (toca el mazo *Equipo*) y pulsa *Comenzar aventura*.
-3. **Explora**: toca la puerta grande para robar 2 cartas, revela una y decide: *afrontarla* (parte 1) o
-   *descartarla y arriesgarte con la otra* (parte 2, obligatoria).
-4. **Combate**: el enemigo ataca primero (2d6, mayor − menor, dobles = falla). Tú gastas hasta 3 de energía:
-   un d6 por ficha. Sin energía, puñetazo de 1.
+1. **Elige héroe y aventura** en el menú. Cada expansión tiene un botón ⓘ que explica qué incluye y cómo cambia la partida.
+   Elegir opciones no recarga ni mueve la pantalla. Con el Gnome Pack puedes **crear tu propio héroe** (raza, clase y signo astral).
+2. **La Posada**: gasta tu oro inicial en equipo (y contrata esbirros con la Posada del Troll Solitario). Si no tienes nada que comprar, la partida empieza directamente.
+3. **Explora**: toca la puerta para robar 2 cartas; la primera se revela sola. Afróntala (parte 1) o descártala y arriesga con la otra (parte 2).
+4. **Combate**: el enemigo ataca primero (2d6, mayor − menor, dobles = falla). Tú gastas hasta 3 de energía, un d6 por ficha. Toca el fieltro para lanzar los dados.
 5. **Cada nivel** (8 turnos): comes una ración, el veneno crece y robas una trama. Con **10 ojos** despierta el jefe.
+
+### Dos tableros
+Las pestañas de abajo alternan entre **Mazmorra** (mazos, puertas, marcadores y franja de expansiones) y **Personaje**
+(tus fichas, el equipo puesto, la mochila, los esbirros y las aflicciones). En Personaje **arrastras** los objetos de la mochila
+a las ranuras del tapete (o a SOLTAR AQUÍ) entre turnos.
 
 ### Controles
 | Acción | Táctil | Ratón / teclado |
 |---|---|---|
 | Actuar sobre mazos, puertas, cartas | tocar | clic |
 | Ver una carta en grande | mantener pulsado | clic derecho |
+| Qué hace cada ficha del HUD | tocarla | clic |
 | Mover / acercar la mesa | arrastrar / pellizcar | arrastrar / rueda |
-| Ver toda la mesa | botón ⌂ | `F` |
-| Diario (mapa, moral, tramas, cementerio, habilidades, registro) | botón 📖 | `J` |
-| Mochila | pestaña inferior | `I` |
-| Sonido | ajustes ⚙ | `M` |
-| Continuar / aceptar | sellos de lacre | `Espacio` / `Enter` |
+| Cambiar de tablero | pestañas | `1` / `2` |
+| Encuadrar la mesa | botón ⛶ | `F` |
+| Diario (mapa, moral, tramas, cementerio, habilidades, registro) | 📖 | `J` |
+| Mochila en abanico | pestaña Mochila | `I` |
+| Aceptar la acción principal | botón | `Espacio` / `Enter` |
 
-La partida se guarda sola al inicio de cada turno y se retoma desde el menú.
+La partida se guarda sola al inicio de cada turno y se retoma desde el menú. En ajustes puedes activar "robar solo al empezar cada turno".
 
 ## Contenido incluido
-
-| Mazo | Cartas |
-|---|---|
-| Juego base | 5 héroes · 3 jefes · 18 enemigos · 16 cartas de mazmorra · 18 botines · 10 pociones · 14 equipos · 12 habilidades · 9 tramas |
-| Warren of Despair (campaña) | héroe Ozzlo · jefe Cíclope · Grunkles y Titilantes · 3 tramas · objetos |
-| Blackened Burrow (campaña) | héroe Qara · jefe Madre Colmena · Avispas y Líderes Llameantes · Escorpión de Fuego · objetos |
-| Loot & Lore (módulo) | héroes Azra, Kiln-Olma y Skral · 3 tramas · 3 habilidades · equipo y botín |
-| The Fanny Pack (módulo) | héroes Grimwald y Nanoc · Asesino, Araña, Morlock, Trampas de Foso · Rey Goblin · Riñonera y más |
-| Beasts & Burdens (módulo) | 8 aflicciones · 6 enemigos · 3 minijefes (Dreadtrodón, Tundra, Caballero de la Muerte) |
-
-Todos los datos están **transcritos de las cartas impresas** (`iron_helm_game/assets/cards`), no inventados.
-Las otras diez expansiones del registro oficial aún no tienen sus cartas en el repositorio: ver
-[`docs/EXPANSIONS.md`](docs/EXPANSIONS.md) para añadirlas.
+Las **15 expansiones oficiales** están jugables (7 campañas y 8 módulos), además del juego base: Warren of Despair, Blackened Burrow,
+Galnok's Labyrinth, Crystal Caverns, Throne of Embers, Malicia's Refuge, The Spire of Zogar, Loot & Lore, Realms & Relics,
+The Lonely Troll Inn, The Fanny Pack, Beasts & Burdens, The Howling Abyss, Iron Chest y Gnome Pack #1.
+Todos los datos están **transcritos de las cartas impresas** (`iron_helm_game/assets/cards`); la tabla de cobertura carta → efecto → test
+está en [`docs/EXPANSIONS.md`](docs/EXPANSIONS.md). La expansión fanmade *Anemia* (reglamento en `17. Iron Helm/`) no está integrada.
 
 ## Desarrollo
 
 ```bash
 npm install            # esbuild + playwright-core (solo desarrollo)
-npm test               # 51 pruebas del motor (reglas, expansiones, partidas completas)
+npm test               # 230 pruebas del motor (reglas, cada carta de cada expansión, partidas completas)
 npm run build          # regenera iron_helm_game/app.bundle.js
 npm run gen:data       # regenera js/data/packs/*.gen.js desde data-src/*.json
 node tools/uibot.mjs 3 c1 1     # juega una partida entera pulsando la interfaz y guarda capturas en shots/
+node tools/uisuite.mjs          # batería de partidas de interfaz con distintas expansiones (añade `móvil` para pantalla táctil)
 ```
 
 ```

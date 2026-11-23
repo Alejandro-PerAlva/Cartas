@@ -1,70 +1,177 @@
-/** Pantalla de inicio: título, elección de héroe con las cartas reales, expansiones y continuar partida. */
+/**
+ * Menú principal: héroe y aventura en dos paneles (pestañas en móvil), todo actualizado EN SITIO
+ * (elegir una expansión no reconstruye la pantalla ni mueve el scroll) y ficha informativa de cada expansión.
+ */
 import { h } from './dom.js';
-import { buildCatalog, listPacks } from '../engine/index.js';
+import { buildCatalog, listPacks, buildCustomHeroPreview } from '../engine/index.js';
 import { sound } from './audio.js';
 import { cardPath } from './cards.js';
+import { icon } from './icons.js';
+import { Builder } from './builder.js';
 
 const PROF = { agilidad: 'Agilidad', mente: 'Mente', fuerza: 'Fuerza' };
+const COUNT_LABEL = {
+  heroes: ['héroe', 'héroes'], bosses: ['jefe', 'jefes'], enemies: ['enemigo', 'enemigos'], items: ['objeto', 'objetos'], plots: ['trama', 'tramas'], skills: ['habilidad', 'habilidades'],
+  environments: ['entorno', 'entornos'], artifacts: ['artefacto', 'artefactos'], mercenaries: ['esbirro', 'esbirros'], adventures: ['mapa de encuentros', 'mapas de encuentros'],
+  dungeonCards: ['carta de mazmorra', 'cartas de mazmorra'], afflictions: ['aflicción', 'aflicciones'],
+};
+const countLabel = (k, n) => { const l = COUNT_LABEL[k] || [k, k]; return n === 1 ? l[0] : l[1]; };
 
 export class Menu {
   constructor(app, root) {
     this.app = app; this.root = root;
     const saved = app.loadPrefs();
     this.cfg = { campaign: saved.campaign || null, modules: saved.modules || [] };
-    this.heroId = saved.heroId || 'c1';
+    this.heroId = saved.heroId || 'c1'; this.tab = 'hero'; this.custom = saved.custom || null; this.customPreview = null;
     this.info = listPacks();
-    this.render();
+    this.build();
   }
-  get heroes() { return buildCatalog(this.cfg).pools.heroes; }
-  render() {
-    const app = this.app; const cat = buildCatalog(this.cfg);
-    if (!cat.pools.heroes.some((x) => x.id === this.heroId)) this.heroId = 'c1';
-    const hero = cat.pools.heroes.find((x) => x.id === this.heroId);
-    const byName = (n) => cat.defs.find((d) => d.name === n);
-    const trappings = hero.trappings.map((id) => cat.def(id).name).join(' y ');
-    const skills = hero.skills.map((id) => cat.def(id).name).join(' y ');
-    this.root.innerHTML = '';
-    const save = app.hasSave();
-    const heroes = h('div.heroes', { dataset: { scroll: '1' } }, cat.pools.heroes.map((x) => {
-      const pk = x.pack !== 'base' ? this.info.packs.find((p) => p.id === x.pack) : null;
-      return h('div.hero-pick' + (x.id === this.heroId ? '.on' : ''), { onclick: () => { sound.unlock(); sound.flip(); this.heroId = x.id; this.render(); } },
-        h('img', { src: cardPath(x.img), alt: x.name }), pk ? h('div.pk', pk.name) : null);
-    }));
-    const packEl = (p) => {
-      const on = p.type === 'campaign' ? this.cfg.campaign === p.id : this.cfg.modules.includes(p.id);
-      return h('div.pack' + (on ? '.on' : '') + (p.type === 'module' ? '.mod' : ''), { onclick: () => this.toggle(p) },
-        h('div.kind', p.type === 'campaign' ? 'CAMPAÑA' : 'MÓDULO'), h('div.tg'),
-        h('b', p.es), h('em', p.name !== p.es ? p.name : `Expansión nº ${p.number}`), h('p', p.blurb),
-        p.type === 'campaign' ? h('p', { style: 'margin-top:6px;font-size:13px;color:#a89570' }, `Jefe final propio · nivel de aventura ${p.adventureLevel}`) : null);
+  get packs() { return this.info.packs; }
+  catalog() { return buildCatalog(this.cfg); }
+
+  /* ================================================================ construcción (una sola vez) */
+  build() {
+    const app = this.app; const save = app.hasSave();
+    this.heroCol = h('section.menu-col.hero-col'); this.advCol = h('section.menu-col.adv-col');
+    this.tabsEl = h('div.menu-tabs', ...[['hero', 'Héroe'], ['adv', 'Aventura']].map(([id, t]) => h('button.tab' + (id === this.tab ? '.on' : ''), { dataset: { tab: id }, onclick: () => { sound.tap(); this.tab = id; this.syncTabs(); } }, t)));
+    this.summary = h('div.menu-summary');
+    this.body = h('div.menu-body', this.heroCol, this.advCol);
+    const stats = app._json('ironhelm.scores.v2', null);
+    this.menuEl = h('div.menu',
+      h('div.torch.l'), h('div.torch.r'),
+      h('div.menu-head', h('h1', 'IRON HELM'), h('p', 'Un último botín antes de colgar la espada…'),
+        stats?.games ? h('small', `Partidas: ${stats.games} · victorias: ${stats.wins} · mejor fondo de jubilación: ${stats.best}`) : null),
+      this.tabsEl, this.body,
+      h('div.menu-foot', this.summary, h('div.menu-btns',
+        save ? h('button.btn', { onclick: () => { sound.unlock(); app.continueGame(); } }, 'CONTINUAR PARTIDA') : null,
+        h('button.btn.primary.big', { onclick: () => this.start() }, 'COMENZAR AVENTURA'))));
+    this.root.append(this.menuEl);
+    this.buildAdventure();
+    this.renderHero();
+    this.syncTabs();
+  }
+  syncTabs() { this.tabsEl.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === this.tab)); this.menuEl.dataset.tab = this.tab; }
+  start() {
+    sound.unlock(); sound.gong();
+    const config = { ...this.cfg, modules: [...this.cfg.modules] }; if (this.heroId === 'custom') config.custom = { ...this.custom };
+    this.app.startGame({ heroId: this.heroId, config });
+  }
+
+  /* ================================================================ aventura y expansiones */
+  buildAdventure() {
+    const camps = this.packs.filter((p) => p.type === 'campaign'); const mods = this.packs.filter((p) => p.type === 'module');
+    const row = (p, kind) => {
+      const el = h('div.opt.' + kind, { dataset: { id: p?.id || 'base' } },
+        h('div.opt-mark'),
+        h('div.opt-main', h('b', p ? p.es : 'Mazmorra original'), h('small', p ? this.sub(p) : 'Juego base · cinco niveles de ocho turnos. El jefe lo decide la debilidad más común de los enemigos que derrotes.')),
+        p ? h('button.opt-info', { title: 'Qué incluye', 'aria-label': `Qué incluye ${p.es}`, onclick: (e) => { e.stopPropagation(); sound.tap(); this.showPackInfo(p); } }, icon('info', 22)) : null);
+      el.addEventListener('click', () => { sound.flip(); if (!p) this.cfg.campaign = null; else this.toggle(p); this.afterChange(); });
+      return el;
     };
-    const camps = this.info.packs.filter((p) => p.type === 'campaign'); const mods = this.info.packs.filter((p) => p.type === 'module');
-    this.root.append(
-      h('div.menu',
-        h('div.torch', { style: 'left:6%' }), h('div.torch', { style: 'right:6%' }),
-        h('div.inner',
-          h('div.logo', h('h1', 'IRON HELM'), h('p', 'Un último botín antes de colgar la espada…')),
-          h('h2', 'Elige a tu héroe'), heroes,
-          h('div.hero-info',
-            h('div', { style: 'font:800 26px var(--font-title);color:var(--gold2)' }, hero.name),
-            h('div', ...[['health', hero.health], ['energy', hero.energy], ['ration', hero.rations], ['gold', hero.gold]].map(([k, v]) => h('span.st', h('img', { src: `assets/tokens/tk_${k}.png`, alt: '' }), v)),
-              h('span.st', '🎒', hero.encumbrance)),
-            h('div', { style: 'margin-top:4px' }, `Equipo: ${trappings} · Habilidad: ${skills} · ${PROF[hero.proficiency]}`)),
-          h('h2', 'Aventura'),
-          h('div.packs', h('div.pack' + (!this.cfg.campaign ? '.on' : ''), { onclick: () => { this.cfg.campaign = null; sound.flip(); this.render(); } },
-            h('div.kind', 'JUEGO BASE'), h('div.tg'), h('b', 'Mazmorra original'), h('em', 'Reglamento 2.x'), h('p', 'Cinco niveles, ocho turnos por nivel. El jefe final lo decide la debilidad más común de los enemigos que derrotes.')), camps.map(packEl)),
-          h('h2', 'Expansiones modulares'),
-          h('div.packs', mods.map(packEl)),
-          h('div.small', `Cartas aún no incluidas en este repositorio: ${this.info.missing.join(', ')}.`),
-          h('div.small', 'Juego en solitario de Jason Glover · Grey Gnome Games. Adaptación digital no oficial para uso personal.')),
-        h('div.foot', save ? h('button.seal.gold', { onclick: () => { sound.unlock(); app.continueGame(); } }, 'CONTINUAR', h('br'), 'PARTIDA') : null,
-          h('button.seal.pulse', { style: 'min-width:130px;height:130px;font-size:20px', onclick: () => { sound.unlock(); sound.gong(); app.startGame({ heroId: this.heroId, config: { ...this.cfg, modules: [...this.cfg.modules] } }); } }, 'COMENZAR', h('br'), 'AVENTURA'))));
-    void byName;
+    this.advCol.append(
+      h('h2', 'Aventura'), h('p.col-hint', 'Elige la mazmorra donde se desarrollará tu partida.'),
+      h('div.opts', row(null, 'radio'), ...camps.map((p) => row(p, 'radio'))),
+      h('h2', 'Expansiones modulares'), h('p.col-hint', 'Se pueden combinar con cualquier aventura. La mayoría aumenta la dificultad.'),
+      h('div.opts', ...mods.map((p) => row(p, 'check'))),
+      this.info.missing?.length ? h('p.col-note', `Sin cartas en el repositorio todavía: ${this.info.missing.join(', ')}.`) : null,
+      h('p.col-note', 'Juego en solitario de Jason Glover · Grey Gnome Games. Adaptación digital no oficial para uso personal.'));
+    this.updateOpts();
+  }
+  sub(p) {
+    const bits = [p.type === 'campaign' ? `Campaña · nivel de aventura ${p.adventureLevel ?? '?'}` : 'Módulo'];
+    if (p.name && p.name !== p.es) bits.push(p.name);
+    return bits.join(' · ');
   }
   toggle(p) {
-    sound.unlock(); sound.flip();
     if (p.type === 'campaign') this.cfg.campaign = this.cfg.campaign === p.id ? null : p.id;
-    else { const i = this.cfg.modules.indexOf(p.id); if (i >= 0) this.cfg.modules.splice(i, 1); else this.cfg.modules.push(p.id); }
-    this.app.savePrefs({ ...this.cfg, heroId: this.heroId });
-    this.render();
+    else {
+      const i = this.cfg.modules.indexOf(p.id);
+      if (i >= 0) this.cfg.modules.splice(i, 1);
+      else {
+        // los módulos exclusivos (mazo de mazmorra alternativo) se excluyen entre sí
+        if (p.exclusive) for (const o of this.packs) if (o.type === 'module' && o.exclusive === p.exclusive) { const j = this.cfg.modules.indexOf(o.id); if (j >= 0) this.cfg.modules.splice(j, 1); }
+        this.cfg.modules.push(p.id);
+      }
+    }
+  }
+  afterChange() {
+    this.app.savePrefs({ ...this.cfg, heroId: this.heroId, custom: this.custom });
+    this.updateOpts(); this.renderHero({ keepScroll: true });
+  }
+  updateOpts() {
+    this.advCol.querySelectorAll('.opt').forEach((el) => {
+      const id = el.dataset.id; const p = this.packs.find((x) => x.id === id);
+      const on = id === 'base' ? !this.cfg.campaign : p.type === 'campaign' ? this.cfg.campaign === id : this.cfg.modules.includes(id)
+        || (this.cfg.campaign && this.packs.find((x) => x.id === this.cfg.campaign)?.includes?.includes(id));
+      el.classList.toggle('on', !!on);
+    });
+  }
+
+  /* ================================================================ héroe */
+  gnomeOn() { return this.cfg.modules.includes('gnome'); }
+  builderButton() {
+    if (!this.gnomeOn()) return null;
+    const c = this.custom;
+    return h('div.builder-cta', h('div', h('b', 'Gnome Pack · crea tu propio héroe'), h('small', c ? `${c.race} ${c.klass} ${c.sign}` : 'Elige raza, clase y signo astral')),
+      h('button.btn' + (this.heroId === 'custom' ? '.primary' : ''), { onclick: () => { sound.flip(); new Builder(this, this.custom || {}).open(); } }, c ? 'EDITAR HÉROE' : 'CREAR HÉROE'));
+  }
+  useCustom(sel, preview) { this.custom = sel; this.customPreview = preview; this.heroId = 'custom'; this.afterChange(); }
+  renderHero({ keepScroll = false } = {}) {
+    const cat = this.catalog(); const heroes = cat.pools.heroes;
+    if (this.heroId === 'custom' && !(this.gnomeOn() && this.custom)) this.heroId = heroes[0].id;
+    if (this.heroId !== 'custom' && !heroes.some((x) => x.id === this.heroId)) this.heroId = heroes[0].id;
+    let hero = heroes.find((x) => x.id === this.heroId);
+    if (this.heroId === 'custom') {
+      const pv = buildCustomHeroPreview(this.custom); this.customPreview = pv;
+      const race = listPacks().gnome.races.find((r) => r.name === this.custom.race);
+      hero = { id: 'custom', name: pv.name || 'Héroe a medida', img: race?.img || heroes[0].img, health: pv.health, energy: pv.energy, encumbrance: pv.encumbrance, rations: pv.rations, gold: pv.gold,
+        trappings: [], skills: [], proficiency: pv.proficiency, pack: 'gnome', _eq: pv.equipment?.map((e) => e.name), _sk: pv.skills?.map((s) => s.name), text: pv.raceAbility };
+    }
+    const old = this.heroCol.querySelector('.heroes'); const sl = old ? old.scrollLeft : 0;
+    const name = (id) => cat.def(id)?.name || id;
+    const trappings = hero._eq || (hero.trappings || []).map(name); const skills = hero._sk || (hero.skills || []).map(name);
+    const pk = hero.pack !== 'base' ? this.packs.find((p) => p.id === hero.pack) : null;
+    const stage = h('div.hero-stage',
+      h('div.hero-card', h('img', { src: cardPath(hero.img), alt: hero.name })),
+      h('div.hero-info', h('div.hero-name', hero.name), pk ? h('div.hero-pack', pk.es) : null,
+        h('div.hero-stats', ...[['health', hero.health, 'Salud'], ['energy', hero.energy, 'Energía'], ['ration', hero.rations, 'Raciones'], ['gold', hero.gold, 'Oro']].map(([k, v, t]) => h('span.st', { title: t }, h('img', { src: `assets/tokens/tk_${k}.png`, alt: t }), String(v))),
+          h('span.st', { title: 'Carga' }, icon('weight', 22), String(hero.encumbrance))),
+        h('dl', h('dt', 'Equipo inicial'), h('dd', trappings.length ? trappings.join(' · ') : 'Ninguno'), h('dt', 'Habilidad'), h('dd', skills.length ? skills.join(' · ') : 'Ninguna'), h('dt', 'Competencia'), h('dd', PROF[hero.proficiency] || '—')),
+        hero.text ? h('p.hero-text', hero.text) : null));
+    const strip = h('div.heroes', [...heroes, ...(this.heroId === 'custom' ? [{ id: 'custom', name: hero.name, img: hero.img }] : [])].map((x) => h('button.hero-pick' + (x.id === this.heroId ? '.on' : ''), { title: x.name, onclick: () => { sound.flip(); this.heroId = x.id; this.app.savePrefs({ ...this.cfg, heroId: x.id }); this.renderHero({ keepScroll: true }); } },
+      h('img', { src: cardPath(x.img), alt: x.name }))));
+    this.heroCol.replaceChildren(...[h('h2', 'Tu héroe'), stage, h('div.heroes-wrap', strip), this.builderButton?.()].filter(Boolean));
+    strip.scrollLeft = keepScroll ? sl : 0;
+    const on = strip.querySelector('.on'); if (on && !keepScroll) on.scrollIntoView({ inline: 'center', block: 'nearest' });
+    this.updateSummary(cat, hero);
+  }
+  updateSummary(cat = this.catalog(), hero = cat.pools.heroes.find((x) => x.id === this.heroId)) {
+    const camp = this.cfg.campaign ? this.packs.find((p) => p.id === this.cfg.campaign)?.es : 'Mazmorra original';
+    const mods = this.cfg.modules.map((id) => this.packs.find((p) => p.id === id)?.es).filter(Boolean);
+    this.summary.replaceChildren(h('b', hero.name), ' · ', camp, mods.length ? ` · ${mods.length} módulo${mods.length > 1 ? 's' : ''}` : '');
+  }
+
+  /* ================================================================ ficha de una expansión */
+  showPackInfo(p) {
+    const on = () => (p.type === 'campaign' ? this.cfg.campaign === p.id : this.cfg.modules.includes(p.id));
+    const counts = Object.entries(p.counts || {}).filter(([, n]) => n > 0).map(([k, n]) => h('span.chip', h('b', String(n)), ' ', countLabel(k, n)));
+    const key = (p.keyCards || []).map((c) => h('button.thumb', { title: c.name, onclick: () => this.zoom(c.img) }, h('img', { src: cardPath(c.img), alt: c.name })));
+    const toggle = h('button.btn.primary', { onclick: () => { sound.flip(); this.toggle(p); this.afterChange(); sync(); } });
+    const sync = () => { toggle.textContent = on() ? 'QUITAR DE LA PARTIDA' : p.type === 'campaign' ? 'ELEGIR ESTA CAMPAÑA' : 'AÑADIR A LA PARTIDA'; };
+    sync();
+    const el = h('div.modal', h('div.veil', { onclick: () => el.remove() }),
+      h('div.sheet.scroll.wide', h('h2', p.es), h('div.pack-sub', this.sub(p)), p.blurb ? h('p.narr', p.blurb) : null,
+        counts.length ? h('div.chips-row', ...counts) : null,
+        p.rules?.length ? [h('h4', 'Cómo cambia la partida'), h('ul.rules', ...p.rules.map((r) => h('li', r)))] : null,
+        p.includes?.length ? h('p.col-note', `Incluye también: ${p.includes.map((id) => this.packs.find((x) => x.id === id)?.es || id).join(', ')}.`) : null,
+        p.exclusive ? h('p.col-note', 'Sustituye al mazo de mazmorra original: no se puede combinar con otro mazo alternativo.') : null,
+        key.length ? [h('h4', 'Cartas destacadas'), h('div.thumbs', ...key)] : null,
+        h('div.btnrow', toggle, h('button.btn.quiet', { onclick: () => el.remove() }, 'CERRAR')),
+        h('button.close-x', { onclick: () => el.remove(), 'aria-label': 'Cerrar' }, icon('x', 18))));
+    this.menuEl.append(el);
+  }
+  zoom(img) {
+    const el = h('div.modal.zoom', { onclick: () => el.remove() }, h('div.veil.dark'), h('img', { src: cardPath(img), alt: '' }));
+    this.menuEl.append(el);
   }
 }

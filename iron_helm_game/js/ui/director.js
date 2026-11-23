@@ -6,7 +6,7 @@ import { h, sleep, WK_ICON } from './dom.js';
 import { Ghost, flyChip, floatText, vignette, shake, burst } from './fx.js';
 import { backOf, backOfDeck, cardPath, cardEl } from './cards.js';
 import { sound } from './audio.js';
-import { ZONES, CARD_D } from './layout.js';
+import { L, CARD_D } from './layout.js';
 
 const STAT_WELL = { hp: 'health', energy: 'energy', gold: 'gold', rations: 'ration', poison: 'poison', blessing: 'blessing' };
 const STAT_NAME = { hp: 'salud', energy: 'energía', gold: 'oro', rations: 'raciones', poison: 'veneno', blessing: 'bendición' };
@@ -47,14 +47,21 @@ export class Director {
     if (def.kind === 'item') return def.deck === 'potion' ? 'potionsUsed' : 'lootUsed';
     return 'lootUsed';
   }
+  /** dónde está (o dónde irá) un objeto del héroe, en pantalla: su ranura si el tablero de personaje está a la vista; si no, el botón de navegación */
   tableRectOfOwned(uid) {
-    // dónde está ahora (en pantalla) un objeto del héroe
-    const e = this.vs.eq; const g = this.g;
-    for (const [slot, z] of [['MP', 'c_main'], ['OM', 'c_off'], ['CA', 'c_head'], ['CP', 'c_body']]) if (e[slot] === uid) return this.T.screenRect(z, undefined);
-    if (e.AC.includes(uid)) return this.T.screenRect('c_acc');
-    return this._trayRect();
+    const T = this.T; const e = this.vs.eq;
+    if (T.tab === 'char') {
+      for (const [slot, z] of [['MP', 'c_main'], ['OM', 'c_off'], ['CA', 'c_head'], ['CP', 'c_body']]) if (e[slot] === uid) return T.screenRect(z);
+      if (e.AC.includes(uid)) return T.screenRect('c_acc');
+      const P = L.ZONES.pack; const c = T.cam.toScreen(P.x + P.w / 2, P.y + 330); const w = 168 * T.cam.s; return { x: c.x - w / 2, y: c.y - w * 0.7, w, h: w * 1.4 };
+    }
+    return this._navRect(e.AC.includes(uid) || ['MP', 'OM', 'CA', 'CP'].some((k) => e[k] === uid) ? 'char' : 'pack');
   }
-  _trayRect() { const t = document.getElementById('trayTab')?.getBoundingClientRect(); return t ? { x: t.left + t.width / 2 - 28, y: t.top - 20, w: 56, h: 79 } : { x: innerWidth / 2 - 28, y: innerHeight - 90, w: 56, h: 79 }; }
+  _navRect(which) {
+    const el = document.querySelector(which === 'char' ? '#nav [data-tab="char"]' : '#nav .pack:not(.hidden)') || document.querySelector('#nav [data-tab="char"]');
+    const t = el?.getBoundingClientRect(); return t ? { x: t.left + t.width / 2 - 24, y: t.top - 10, w: 48, h: 68 } : { x: innerWidth / 2 - 24, y: innerHeight - 90, w: 48, h: 68 };
+  }
+  _trayRect() { return this._navRect('pack'); }
 
   /* ================================================================ eventos */
   async handle(ev) {
@@ -69,22 +76,22 @@ export class Director {
 
   /* ---- reparto y revelado ---- */
   async on_deal(ev) {
-    const T = this.T; this.vs.counts.dungeon = Math.max(0, this.vs.counts.dungeon - 2); T.render(true);
+    const T = this.T; this.vs.counts.dungeon = Math.max(0, this.vs.counts.dungeon - 2); T.render();
     this.vs.pair = [null, null]; this.vs.hidePair = [true, true]; T.faceUp = new Set();
     const from = T.screenRect('dungeon'); const back = backOfDeck('dungeon');
     sound.deal();
     const gs = [0, 1].map(() => new Ghost({ front: null, back, rect: from }));
     await Promise.all(gs.map((g, i) => g.fly(T.screenRect('door' + (i + 1)), { ms: this.k(560), delay: i * this.k(150), arc: 40 * T.cam.s + 20, rot: i ? 2 : -2 })));
-    this.vs.pair = ev.uids.slice(); this.vs.hidePair = [false, false]; T.render(true); gs.forEach((g) => g.remove());
+    this.vs.pair = ev.uids.slice(); this.vs.hidePair = [false, false]; T.render(); gs.forEach((g) => g.remove());
     await this.wait(80);
   }
   async on_reveal(ev) {
     const T = this.T; const g = this.g; const def = g.def(ev.uid);
     if (ev.both) { // antorcha / lámpara: ambas cartas se giran sobre la mesa
-      (T.faceUp ||= new Set()).add(ev.uid); T.render(true); sound.flip(); await this.wait(350); return;
+      (T.faceUp ||= new Set()).add(ev.uid); T.render(); sound.flip(); await this.wait(350); return;
     }
     const from = T.screenRect('door' + (ev.slot + 1));
-    this.vs.hidePair[ev.slot] = true; T.render(true);
+    this.vs.hidePair[ev.slot] = true; T.render();
     const gh = new Ghost({ front: g.img(ev.uid), back: backOf(def), rect: from, z: 150 });
     sound.flip();
     await gh.fly(this.spotRect(), { ms: this.k(650), flip: true, arc: 30 });
@@ -116,13 +123,13 @@ export class Director {
   async on_discardCard(ev) {
     const T = this.T; const g = this.g; const def = g.def(ev.uid); const vs = this.vs;
     const toZone = this.discardZoneOf(def);
-    const push = (list) => { if (!list.includes(ev.uid)) list.push(ev.uid); T.render(true); };
+    const push = (list) => { if (!list.includes(ev.uid)) list.push(ev.uid); T.render(); };
     if (this.spot?.uid === ev.uid) {
       await this.dismissSpot(toZone); push(vs.piles.dungeonDiscard); return;
     }
     if (def.isDungeon) {
       const slot = vs.pair.indexOf(ev.uid); let from = slot >= 0 ? T.screenRect('door' + (slot + 1)) : T.screenRect('door1');
-      if (slot >= 0) { vs.hidePair[slot] = true; T.render(true); }
+      if (slot >= 0) { vs.hidePair[slot] = true; T.render(); }
       const gh = new Ghost({ front: g.img(ev.uid), back: backOf(def), rect: from, z: 150 }); sound.slide();
       await gh.fly(T.screenRect(toZone), { ms: this.k(480), rot: -3 }); gh.remove(); push(vs.piles.dungeonDiscard); return;
     }
@@ -130,7 +137,7 @@ export class Director {
     if (def.kind === 'item') {
       const from = this.tableRectOfOwned(ev.uid);
       for (const k of ['MP', 'OM', 'CA', 'CP']) if (vs.eq[k] === ev.uid) vs.eq[k] = null;
-      vs.eq.AC = vs.eq.AC.filter((u) => u !== ev.uid); vs.hand = vs.hand.filter((u) => u !== ev.uid); T.render(true); this.app.updateTray();
+      vs.eq.AC = vs.eq.AC.filter((u) => u !== ev.uid); vs.hand = vs.hand.filter((u) => u !== ev.uid); T.render(); this.app.updateTray();
       const gh = new Ghost({ front: g.img(ev.uid), back: backOf(def), rect: from, up: true, z: 150 });
       const why = ev.why;
       if (why === 'use' || why === 'eat') { sound.potion(); burst({ x: from.x + from.w / 2, y: from.y + from.h / 2 }, '255,230,150', 240); await gh.fly({ x: from.x - from.w * 0.25, y: from.y - from.h * 0.7, w: from.w * 1.5, h: from.h * 1.5 }, { ms: this.k(400) }); gh.remove(); }
@@ -148,31 +155,36 @@ export class Director {
     const def = this.g.def(ev.uid); const z = this.deckZoneOf(def); const key = { loot: 'loot', potions: 'potions', enemies: 'enemies', plots: 'plots', trappings: 'trappings', skills: 'skills' }[z === 'rubble' ? '' : z];
     if (key && key in this.vs.counts) this.vs.counts[key] = Math.max(0, this.vs.counts[key] - 1);
     if (def.kind === 'affliction') this.drawn.set(ev.uid, { from: this.T.screenRect('enemies') }); else this.drawn.set(ev.uid, { zone: z });
-    this.T.render(true);
+    this.T.render();
   }
   async on_gainCard(ev) {
-    if (ev.silent) { this._syncOwned(); return; }
+    if (ev.silent || this.app.overlays.userKind === 'shop') { this.drawn.delete(ev.uid); this._syncOwned(); return; }
     const T = this.T; const g = this.g; const def = g.def(ev.uid); const info = this.drawn.get(ev.uid); this.drawn.delete(ev.uid);
+    const origin = this.app.takeOrigin(ev.uid);
+    sound.deal();
+    let gh;
+    if (origin) { // el jugador la ha elegido en un menú: sale de donde la tocó
+      gh = new Ghost({ front: g.img(ev.uid), back: backOf(def), rect: origin, up: true, z: 160 });
+      this._syncOwned(); sound.token();
+      await gh.fly(this.tableRectOfOwned(ev.uid), { ms: this.k(520), arc: 30 }); gh.remove(); sound.equip(); T.render(); this.app.updateTray(); return;
+    }
     const zone = info?.zone || this.deckZoneOf(def);
     const from = T.screenRect(zone === 'rubble' ? 'enemies' : zone);
-    const gh = new Ghost({ front: g.img(ev.uid), back: backOf(def), rect: from, z: 160 });
-    sound.deal();
+    gh = new Ghost({ front: g.img(ev.uid), back: backOf(def), rect: from, z: 160 });
     const showRect = (() => { const r = this.spotRect(); const k = 0.62; return { x: r.x + r.w * (1 - k) / 2, y: r.y + r.h * (1 - k) / 2 + 20, w: r.w * k, h: r.h * k }; })();
     await gh.fly(showRect, { ms: this.k(560), flip: true, arc: 40 });
     this.app.caption(`${def.deck === 'potion' ? 'Poción' : def.deck === 'trapping' ? 'Equipo' : 'Botín'}: ${def.name}`);
     sound.token(); await this.wait(def.deck === 'potion' || def.deck === 'trapping' ? 650 : 900);
-    // destino: ranura o mochila
     this._syncOwned();
-    const dest = this.tableRectOfOwned(ev.uid);
-    await gh.fly(dest, { ms: this.k(520), arc: 30 }); gh.remove(); sound.equip();
-    T.render(true); this.app.updateTray();
+    await gh.fly(this.tableRectOfOwned(ev.uid), { ms: this.k(520), arc: 30 }); gh.remove(); sound.equip();
+    T.render(); this.app.updateTray();
   }
-  _syncOwned() { const g = this.g; const vs = this.vs; vs.eq = { MP: g.s.eq.MP, OM: g.s.eq.OM, CA: g.s.eq.CA, CP: g.s.eq.CP, AC: g.s.eq.AC.slice() }; vs.hand = g.s.z.hand.slice(); this.T.render(true); this.app.updateTray(); }
+  _syncOwned() { const g = this.g; const vs = this.vs; vs.eq = { MP: g.s.eq.MP, OM: g.s.eq.OM, CA: g.s.eq.CA, CP: g.s.eq.CP, AC: g.s.eq.AC.slice() }; vs.hand = g.s.z.hand.slice(); this.T.render(); this.app.updateTray(); }
   async on_equip(ev) { this._syncOwned(); if (!ev.auto) sound.equip(); }
   async on_unequip() { this._syncOwned(); sound.equip(); }
   async on_returnCard() { this._syncOwned(); sound.coin(); }
   async on_sellCard() { this._syncOwned(); sound.coin(); }
-  async on_learnSkill(ev) { this.vs.skills = this.g.s.hero.skills.map((id) => ({ id, uid: this.g.s.hero.skillCards[id] })); if (!ev.free) { sound.level(); this.app.caption(`Nueva habilidad: ${this.g.cat.def(ev.id).name}`); } this.T.render(true); this.vs.counts.skills = this.g.s.z.skills.length; this.T.render(true); await this.wait(ev.free ? 0 : 500); }
+  async on_learnSkill(ev) { this.vs.skills = this.g.s.hero.skills.map((id) => ({ id, uid: this.g.s.hero.skillCards[id] })); if (!ev.free) { sound.level(); this.app.caption(`Nueva habilidad: ${this.g.cat.def(ev.id).name}`); } this.T.render(); this.vs.counts.skills = this.g.s.z.skills.length; this.T.render(); await this.wait(ev.free ? 0 : 500); }
   async on_reshuffle() { sound.deal(); }
   async on_peek(ev) { await this.wait(100); }
 
@@ -180,25 +192,35 @@ export class Director {
   async on_stat(ev) {
     const T = this.T; const s = this.vs.stats; const map = { hp: 'hp', energy: 'energy', gold: 'gold', rations: 'rations', poison: 'poison', blessing: 'blessing', morality: 'morality', maxhp: 'maxHp' };
     const key = map[ev.stat]; if (key) s[key] = ev.stat === 'maxhp' ? this.g.maxHp() : ev.to;
-    T.render(true); this.app.updateHud(); this.arena.open_ && this.arena.refreshHero();
+    s.weight = this.g.weight(); s.maxWeight = this.g.maxWeight();
+    T.render(); this.app.updateHud(); this.arena.open_ && this.arena.refreshHero();
     if (ev.stat === 'morality' || ev.stat === 'maxhp') { await this.wait(ev.stat === 'morality' ? 450 : 0); return; }
     const delta = ev.to - ev.from; if (!delta) return;
-    const well = STAT_WELL[ev.stat]; const at = this.arena.open_ ? this._arenaChipAt(ev.stat) : T.wellCenter(well);
+    const well = STAT_WELL[ev.stat];
+    const at = this._statTarget(ev.stat, well);
     const good = ev.stat === 'poison' ? delta < 0 : delta > 0;
     floatText(`${delta > 0 ? '+' : '−'}${Math.abs(delta)}`, at, good ? 'good' : 'bad');
     const tk = `assets/tokens/tk_${well}.png`;
-    if (delta > 0) { const src = this.arena.open_ ? { x: at.x, y: at.y + 140 } : { x: at.x, y: at.y + 130 }; for (let i = 0; i < Math.min(delta, 4); i++) flyChip(tk, src, at, { ms: this.k(520), delay: i * 90 }); }
-    else for (let i = 0; i < Math.min(-delta, 4); i++) flyChip(tk, at, { x: at.x + (i - 1.5) * 26, y: at.y + 120 }, { ms: this.k(520), delay: i * 70 });
+    const bank = T.tab === 'dungeon' && !this.arena.open_ ? T.bankCenter(well) : { x: at.x, y: at.y + 130 };
+    if (delta > 0) { for (let i = 0; i < Math.min(delta, 4); i++) flyChip(tk, bank, at, { ms: this.k(520), delay: i * 90 }); }
+    else for (let i = 0; i < Math.min(-delta, 4); i++) flyChip(tk, at, { x: bank.x + (i - 1.5) * 12, y: bank.y }, { ms: this.k(520), delay: i * 70 });
     if (ev.stat === 'hp') { if (delta < 0) { sound.hurt(); vignette(); } else { sound.heal(); vignette('green'); } }
     else if (ev.stat === 'gold') sound.coin(); else if (ev.stat === 'poison') { if (delta > 0) { sound.poison(); vignette('green'); } else sound.heal(); }
     else if (ev.stat === 'blessing') sound.bless(); else sound.token();
     await this.wait(380);
   }
+  /** punto de pantalla donde "aterrizan" las fichas: arena > tablero de personaje > HUD */
+  _statTarget(stat, well) {
+    if (this.arena.open_) return this._arenaChipAt(stat);
+    if (this.T.tab === 'char') return this.T.wellCenter(well);
+    const chip = document.querySelector(`#hud .stat[data-stat="${stat}"]`); const r = chip?.getBoundingClientRect();
+    return r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : { x: innerWidth / 2, y: 40 };
+  }
   _arenaChipAt(stat) {
     const el = this.arena.heroChips; const idx = { hp: 0, energy: 1, poison: 2, blessing: 3, gold: 4, rations: 5 }[stat] ?? 0; const kid = el.children[idx];
     const r = (kid || el).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
   }
-  async on_eyes(ev) { this.vs.stats.eyes = ev.eyes; this.T.render(true); sound.eye(); vignette(); const e = this.T.eyesBadge; e.style.transform = 'scale(1.5)'; e.style.transition = 'transform .5s'; await this.wait(500); e.style.transform = ''; this.app.updateHud(); }
+  async on_eyes(ev) { this.vs.stats.eyes = ev.eyes; this.T.render(); sound.eye(); vignette(); const e = this.T.eyesBadge; e.classList.add('pop'); await this.wait(500); e.classList.remove('pop'); this.app.updateHud(); }
 
   /* ---- trama ---- */
   async on_plot(ev) {
@@ -210,10 +232,10 @@ export class Director {
   }
 
   /* ---- niveles y turnos ---- */
-  async on_levelStart(ev) { this.vs.stats.level = ev.level; this.vs.stats.turn = 0; this.vs.counts.dungeon = this.g.s.z.dungeon.length; this.vs.piles.dungeonDiscard = []; this.T.render(true); this.app.updateHud(); await this.banner(`NIVEL ${ev.level}`, 'La mazmorra se agita…'); }
-  async on_levelUp(ev) { this.vs.stats.level = ev.level; this.T.render(true); sound.level(); await this.wait(300); }
+  async on_levelStart(ev) { this.vs.stats.level = ev.level; this.vs.stats.turn = 0; this.vs.counts.dungeon = this.g.s.z.dungeon.length; this.vs.piles.dungeonDiscard = []; this.T.render(); this.app.updateHud(); await this.banner(`NIVEL ${ev.level}`, 'La mazmorra se agita…'); }
+  async on_levelUp(ev) { this.vs.stats.level = ev.level; this.T.render(); sound.level(); await this.wait(300); }
   async on_levelEnd(ev) { await this.banner('FIN DEL NIVEL', `Nivel ${ev.level} completado`); }
-  async on_turnEnd(ev) { this.vs.stats.turn = ev.turn; this.T.render(true); }
+  async on_turnEnd(ev) { this.vs.stats.turn = ev.turn; this.T.render(); }
   async banner(title, sub = '') {
     sound.level();
     const el = h('div', { style: 'position:fixed;inset:0;z-index:420;display:grid;place-items:center;pointer-events:none;background:linear-gradient(transparent,rgba(0,0,0,.55) 40%,rgba(0,0,0,.55) 60%,transparent);animation:fadein .3s both' },
@@ -247,7 +269,7 @@ export class Director {
   async on_enemyDefeated() { if (this.arena.open_) await this.arena.enemyDie(); }
   async on_throw(ev) { sound.sword(); await this.wait(150); }
   async on_potionThrown() { sound.potion(); await this.wait(150); }
-  async on_combatEnd(ev) { if (this.arena.open_) await this.arena.end(); this.T.faceUp = new Set(); this.T.render(true); }
+  async on_combatEnd(ev) { if (this.arena.open_) await this.arena.end(); this.T.faceUp = new Set(); this.T.render(); }
 
   /* ---- jefe, visita divina, final ---- */
   async on_boss(ev) {

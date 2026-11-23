@@ -2,7 +2,6 @@
 export default {
  "heroes": [
   {
-   "id": "c16",
    "kind": "hero",
    "code": "C16",
    "name": "Grimwald",
@@ -20,10 +19,11 @@ export default {
     "Valorar"
    ],
    "proficiency": "fuerza",
-   "pack": "fanny_pack"
+   "pack": "fanny_pack",
+   "id": "c16",
+   "key": "C16"
   },
   {
-   "id": "c17",
    "kind": "hero",
    "code": "C17",
    "name": "Nanoc el Bárbaro",
@@ -40,13 +40,14 @@ export default {
     "Bloquear"
    ],
    "proficiency": "fuerza",
-   "pack": "fanny_pack"
+   "pack": "fanny_pack",
+   "id": "c17",
+   "key": "C17"
   }
  ],
  "bosses": [],
  "enemies": [
   {
-   "id": "e34",
    "kind": "enemy",
    "code": "E34",
    "name": "Asesino",
@@ -57,10 +58,11 @@ export default {
    "damage": 1,
    "treasure": 1,
    "weakness": "fire",
-   "purse": 1
+   "purse": 1,
+   "id": "e34",
+   "key": "E34"
   },
   {
-   "id": "e35",
    "kind": "enemy",
    "code": "E35",
    "name": "Araña Gigante",
@@ -71,10 +73,11 @@ export default {
    "damage": 2,
    "treasure": 0,
    "weakness": "ice",
-   "purse": 0
+   "purse": 0,
+   "id": "e35",
+   "key": "E35"
   },
   {
-   "id": "e36",
    "kind": "enemy",
    "code": "E36",
    "name": "Trampa de Foso",
@@ -82,6 +85,8 @@ export default {
    "text": "Si estás resolviendo una carta de emboscada robada como primera carta, evitas la Trampa de Foso. En cualquier otro caso, pierdes d6-d6 puntos de vida.",
    "pack": "fanny_pack",
    "trap": true,
+   "id": "e36",
+   "key": "E36",
    "copies": 2,
    "imgs": [
     "expansions/fanny_pack/card_003.jpg",
@@ -89,7 +94,6 @@ export default {
    ]
   },
   {
-   "id": "e37",
    "kind": "enemy",
    "code": "E37",
    "name": "Morlock",
@@ -100,12 +104,13 @@ export default {
    "damage": 2,
    "treasure": 1,
    "weakness": "fire",
-   "purse": 0
+   "purse": 0,
+   "id": "e37",
+   "key": "E37"
   }
  ],
  "loot": [
   {
-   "id": "l47",
    "kind": "item",
    "deck": "loot",
    "code": "L47",
@@ -115,10 +120,11 @@ export default {
    "weight": 3,
    "slot": "2M",
    "text": "Por el coste de 1 moneda de oro, puedes añadir un dado adicional a tu tirada de ataque.",
-   "pack": "fanny_pack"
+   "pack": "fanny_pack",
+   "id": "l47",
+   "key": "L47"
   },
   {
-   "id": "l48",
    "kind": "item",
    "deck": "loot",
    "code": "L48",
@@ -128,10 +134,11 @@ export default {
    "weight": 1,
    "slot": "AC",
    "text": "Mientras el Objeto de Recuerdo esté en tu inventario, ganas 2 de moral.",
-   "pack": "fanny_pack"
+   "pack": "fanny_pack",
+   "id": "l48",
+   "key": "L48"
   },
   {
-   "id": "l49",
    "kind": "item",
    "deck": "loot",
    "code": "L49",
@@ -141,10 +148,11 @@ export default {
    "weight": 1,
    "slot": "AC",
    "text": "Descártala para destruir a cualquier enemigo no muerto con 5 o menos puntos de vida. O bien, descártala para hacer que cualquier enemigo tenga como debilidad “no muerto”.",
-   "pack": "fanny_pack"
+   "pack": "fanny_pack",
+   "id": "l49",
+   "key": "L49"
   },
   {
-   "id": "l50",
    "kind": "item",
    "deck": "loot",
    "code": "L50",
@@ -154,10 +162,11 @@ export default {
    "weight": 2,
    "slot": "OM",
    "text": "Resta 1 del daño inicial.\n+1 daño a la suma de las tiradas de ataque.\nPuede usarse con armas a dos manos.",
-   "pack": "fanny_pack"
+   "pack": "fanny_pack",
+   "id": "l50",
+   "key": "L50"
   },
   {
-   "id": "at9",
    "kind": "item",
    "deck": "loot",
    "code": "AT9",
@@ -168,13 +177,15 @@ export default {
    "slot": "AC",
    "text": "Mientras lo tengas equipada, añade +2 a tu salud máxima. O bien, descártala para ganar 2d6 puntos de vida.",
    "pack": "fanny_pack",
-   "rare": true
+   "rare": true,
+   "artifact": true,
+   "id": "at9",
+   "key": "AT9"
   }
  ],
  "potions": [],
  "trappings": [
   {
-   "id": "t38",
    "kind": "item",
    "deck": "trapping",
    "code": "T38",
@@ -184,10 +195,11 @@ export default {
    "weight": 1,
    "slot": "AC",
    "text": "Descártala para relanzar todos tus dados durante un ataque. O bien, descártala para relanzar los dados de un ataque enemigo.",
-   "pack": "fanny_pack"
+   "pack": "fanny_pack",
+   "id": "t38",
+   "key": "T38"
   },
   {
-   "id": "t39",
    "kind": "item",
    "deck": "trapping",
    "code": "T39",
@@ -197,10 +209,11 @@ export default {
    "weight": 1,
    "slot": "AC",
    "text": "Mientras lo tengas equipada, puedes llevar hasta tres accesorios (AC) sin que afecte a tu valor de carga.",
-   "pack": "fanny_pack"
+   "pack": "fanny_pack",
+   "id": "t39",
+   "key": "T39"
   },
   {
-   "id": "t40",
    "kind": "item",
    "deck": "trapping",
    "code": "T40",
@@ -210,13 +223,14 @@ export default {
    "weight": 1,
    "slot": "AC",
    "text": "Descarta esta carta para derrotar a cualquier enemigo excepto a un jefe final. Puedes conservar la carta para aprender una habilidad, pero no ganas tesoro alguno.",
-   "pack": "fanny_pack"
+   "pack": "fanny_pack",
+   "id": "t40",
+   "key": "T40"
   }
  ],
  "skills": [],
  "plots": [
   {
-   "id": "pt40",
    "kind": "plot",
    "code": "PT40",
    "name": "El Espejo",
@@ -236,12 +250,13 @@ export default {
      "text": "Trepas por unas escarpadas rocas y encuentras una salida. Pierdes 1 de energía."
     }
    ],
-   "pack": "fanny_pack"
+   "pack": "fanny_pack",
+   "id": "pt40",
+   "key": "PT40"
   }
  ],
  "plotEnemies": [
   {
-   "id": "pt39",
    "kind": "plot",
    "code": "PT39",
    "name": "Rey Goblin",
@@ -254,12 +269,23 @@ export default {
    "weakness": "fire",
    "purse": 0,
    "plotEnemy": true,
-   "eyes": 4
+   "eyes": 4,
+   "id": "pt39",
+   "key": "PT39"
   }
  ],
  "afflictions": [],
  "dungeon": [],
+ "environments": [],
+ "artifacts": [],
+ "mercenaries": [],
+ "adventures": [],
+ "gnome": null,
+ "rules": [],
  "meta": {
+  "backs": {
+   "artifacts": "expansions/fanny_pack/card_032.jpg"
+  },
   "intro": {
    "name": "The Fanny Pack",
    "text": "The Fanny Pack es una expansión para potenciar y complementar el juego base de Iron Helm. También se puede utilizar con cualquier otra expansión, para así mejorar la experiencia de juego.\nLo mejor de esta expansión es que la mayoría del contenido ha sido creado por seguidores del juego Iron Helm, cosa que la hace un producto muy especial. De ahí su nombre: \"The FANny Pack\".\nUn agradecimiento especial a los seguidores de Iron Helm por sus increíbles contribuciones creativas:\nJakub Wojtowicz, Matthew Biddle\nCraig Asquith, Jesse Juutilainen\nNicholas Hnatiuk, Joe Phelps\nFreek Kuper, Frederic Huot",

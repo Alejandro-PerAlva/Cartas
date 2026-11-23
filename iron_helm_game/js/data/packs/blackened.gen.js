@@ -2,7 +2,6 @@
 export default {
  "heroes": [
   {
-   "id": "c6",
    "kind": "hero",
    "code": "C6",
    "name": "Qara",
@@ -19,12 +18,13 @@ export default {
     "Cetrería"
    ],
    "proficiency": "mente",
-   "pack": "blackened"
+   "pack": "blackened",
+   "id": "c6",
+   "key": "C6"
   }
  ],
  "bosses": [
   {
-   "id": "b5",
    "kind": "boss",
    "code": "B5",
    "name": "Madre Colmena",
@@ -35,12 +35,13 @@ export default {
    "weakness": "ice",
    "purse": 3,
    "text": "Los ataques iniciales con éxito que realice la Madre Colmena duplican tu nivel de veneno actual.",
-   "pack": "blackened"
+   "pack": "blackened",
+   "id": "b5",
+   "key": "B5"
   }
  ],
  "enemies": [
   {
-   "id": "e16",
    "kind": "enemy",
    "code": "E16",
    "name": "Avispa Llameante",
@@ -52,6 +53,8 @@ export default {
    "treasure": 1,
    "weakness": "ice",
    "purse": 0,
+   "id": "e16",
+   "key": "E16",
    "copies": 3,
    "imgs": [
     "expansions/blackened/card_002.jpg",
@@ -60,7 +63,6 @@ export default {
    ]
   },
   {
-   "id": "e15",
    "kind": "enemy",
    "code": "E15",
    "name": "Líder Llameante",
@@ -72,6 +74,8 @@ export default {
    "treasure": 1,
    "weakness": "ice",
    "purse": 1,
+   "id": "e15",
+   "key": "E15",
    "copies": 2,
    "imgs": [
     "expansions/blackened/card_005.jpg",
@@ -81,7 +85,6 @@ export default {
  ],
  "loot": [
   {
-   "id": "l23",
    "kind": "item",
    "deck": "loot",
    "code": "L23",
@@ -91,10 +94,11 @@ export default {
    "weight": 2,
    "slot": "2M",
    "text": "Siempre que en tu tirada de combate saques al menos un resultado de dobles, añade 5 a la suma total.",
-   "pack": "blackened"
+   "pack": "blackened",
+   "id": "l23",
+   "key": "L23"
   },
   {
-   "id": "l25",
    "kind": "item",
    "deck": "loot",
    "code": "L25",
@@ -104,10 +108,11 @@ export default {
    "weight": 1,
    "slot": "AC",
    "text": "Descarta esta carta para ganar 4 de salud y 2 de energía, pero ganas 1 de veneno.",
-   "pack": "blackened"
+   "pack": "blackened",
+   "id": "l25",
+   "key": "L25"
   },
   {
-   "id": "l24",
    "kind": "item",
    "deck": "loot",
    "code": "L24",
@@ -117,10 +122,11 @@ export default {
    "weight": 2,
    "slot": "AC",
    "text": "Cada vez que robes una carta de escaramuza, puedes mirar la carta superior del mazo de enemigos antes de resolverla.",
-   "pack": "blackened"
+   "pack": "blackened",
+   "id": "l24",
+   "key": "L24"
   },
   {
-   "id": "l22",
    "kind": "item",
    "deck": "loot",
    "code": "L22",
@@ -130,13 +136,14 @@ export default {
    "weight": 2,
    "slot": "CA",
    "text": "Resta 1 al daño inicial y añade 1 a la suma de tus tiradas de ataque. Una vez equipado, no puedes retirarlo de tu inventario.",
-   "pack": "blackened"
+   "pack": "blackened",
+   "id": "l22",
+   "key": "L22"
   }
  ],
  "potions": [],
  "trappings": [
   {
-   "id": "t17",
    "kind": "item",
    "deck": "trapping",
    "code": "T17",
@@ -146,10 +153,11 @@ export default {
    "weight": 1,
    "slot": "AC",
    "text": "Cuando tengas equipado el Zurrón de Alquimista, todas las pociones tienen un peso de cero.",
-   "pack": "blackened"
+   "pack": "blackened",
+   "id": "t17",
+   "key": "T17"
   },
   {
-   "id": "t18",
    "kind": "item",
    "deck": "trapping",
    "code": "T18",
@@ -159,24 +167,26 @@ export default {
    "weight": 2,
    "slot": "MP",
    "text": "Relanza todos los resultados de 1 en tiradas de ataque.",
-   "pack": "blackened"
+   "pack": "blackened",
+   "id": "t18",
+   "key": "T18"
   }
  ],
  "skills": [
   {
-   "id": "s14",
    "kind": "skill",
    "code": "S14",
    "name": "Cetrería",
    "img": "expansions/blackened/card_026.jpg",
    "proficiency": "mente",
    "text": "Al principio de cada nivel realiza una tirada d6 para ver qué encuentra tu pájaro.\n[dados 1,2] FALLO - Tu pájaro no encuentra nada.\n[dados 3,4] ÉXITO - Ganas 1 moneda de oro.\n[dados 5,6] ÉXITO - Ganas 1 ración.",
-   "pack": "blackened"
+   "pack": "blackened",
+   "id": "s14",
+   "key": "S14"
   }
  ],
  "plots": [
   {
-   "id": "pt14",
    "kind": "plot",
    "code": "PT14",
    "name": "El Viejo Olmo",
@@ -196,10 +206,11 @@ export default {
      "text": "Buscas con tesón alrededor del árbol y, al cabo de un rato, encuentras unas cuantas setas de colmenilla escondidas entre la maleza.\nGanas 2 raciones."
     }
    ],
-   "pack": "blackened"
+   "pack": "blackened",
+   "id": "pt14",
+   "key": "PT14"
   },
   {
-   "id": "pt15",
    "kind": "plot",
    "code": "PT15",
    "name": "El Vagabundo",
@@ -219,12 +230,13 @@ export default {
      "text": "Empujas al viejo a un lado y le arrancas la moneda de la mano con una carcajada.\nGanas 1 de oro.\nBaja un nivel en el control de moral."
     }
    ],
-   "pack": "blackened"
+   "pack": "blackened",
+   "id": "pt15",
+   "key": "PT15"
   }
  ],
  "plotEnemies": [
   {
-   "id": "pt13",
    "kind": "plot",
    "code": "PT13",
    "name": "Escorpión de Fuego",
@@ -237,16 +249,43 @@ export default {
    "weakness": "ice",
    "purse": 0,
    "plotEnemy": true,
-   "eyes": 0
+   "eyes": 0,
+   "id": "pt13",
+   "key": "PT13"
   }
  ],
  "afflictions": [],
  "dungeon": [],
+ "environments": [],
+ "artifacts": [],
+ "mercenaries": [],
+ "adventures": [],
+ "gnome": null,
+ "rules": [],
  "meta": {
+  "backs": {},
   "intro": {
    "name": "Madriguera Ennegrecida",
    "text": "Interminables días de viaje por las sedientas tierras de Aul Dang te han hecho llegar hasta los primeros peldaños de una gran escalera que se ahonda en las ardientes profundidades de la tierra. ¿Qué riquezas se esconderán allí…?\nRetira las siguientes cartas del juego base y sustitúyelas por las cartas de esta expansión de aventuras.\nEnemigos: Zombies, Lobos y Arqueros no Muertos.\nTramas: El Lobo, el Hombre Cerdo y El Prisionero.\nJefe Final: Madre Colmena.\nNIVEL 3",
    "img": "expansions/blackened/card_000.jpg"
+  },
+  "campaign": {
+   "name": "Madriguera Ennegrecida",
+   "level": 3,
+   "removes": {
+    "enemies": [
+     "Zombies",
+     "Lobos",
+     "Arqueros no Muertos"
+    ],
+    "plots": [
+     "El Lobo",
+     "el Hombre Cerdo",
+     "El Prisionero"
+    ]
+   },
+   "boss": "Madre Colmena",
+   "adds": null
   },
   "map": "expansions/blackened/card_011.jpg"
  }

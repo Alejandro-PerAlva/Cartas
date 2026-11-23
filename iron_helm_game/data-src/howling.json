@@ -1,0 +1,218 @@
+[
+  {
+    "img": "card_000.jpg",
+    "kind": "dungeon2",
+    "code": "D11",
+    "name": "Emboscada",
+    "option1": "Pillas a tu enemigo por sorpresa y ganas la iniciativa.\nRoba una carta de enemigo e ignora el daño inicial que inflige. Añade 3 de daño a tu primer ataque.\nAñade el nivel de la mazmorra a su valor de salud.",
+    "option2": "Tu enemigo te pilla por sorpresa, ganando la iniciativa.\nRoba una carta de enemigo y añade el nivel de la mazmorra al daño inicial que inflige.\nAñade a su salud el nivel de la mazmorra +5."
+  },
+  {
+    "img": "card_001.jpg",
+    "kind": "dungeon2",
+    "code": "D11",
+    "name": "Emboscada",
+    "option1": "Pillas a tu enemigo por sorpresa y ganas la iniciativa.\nRoba una carta de enemigo e ignora el daño inicial que inflige. Añade 3 de daño a tu primer ataque.\nAñade el nivel de la mazmorra a su valor de salud.",
+    "option2": "Tu enemigo te pilla por sorpresa, ganando la iniciativa.\nRoba una carta de enemigo y añade el nivel de la mazmorra al daño inicial que inflige.\nAñade a su salud el nivel de la mazmorra +5."
+  },
+  {
+    "img": "card_002.jpg",
+    "kind": "dungeon2",
+    "code": "D11",
+    "name": "Emboscada",
+    "option1": "Pillas a tu enemigo por sorpresa y ganas la iniciativa.\nRoba una carta de enemigo e ignora el daño inicial que inflige. Añade 3 de daño a tu primer ataque.\nAñade el nivel de la mazmorra a su valor de salud.",
+    "option2": "Tu enemigo te pilla por sorpresa, ganando la iniciativa.\nRoba una carta de enemigo y añade el nivel de la mazmorra al daño inicial que inflige.\nAñade a su salud el nivel de la mazmorra +5."
+  },
+  {
+    "img": "card_003.jpg",
+    "kind": "dungeon2",
+    "code": "D12",
+    "name": "Tesoro",
+    "option1": "Encuentras un cofre que ha sido abierto y saqueado. Solo queda una moneda.\nGanas 1 de oro.",
+    "option2": "Este cofre debe haber sido olvidado hace tiempo ya que está repleto de botín.\nRoba 1 carta de botín y 1 carta de poción.\n- o -\nGanas d6 de oro y 1 ración."
+  },
+  {
+    "img": "card_004.jpg",
+    "kind": "dungeon2",
+    "code": "D13",
+    "name": "Laberinto",
+    "option1": "¡Seguro que tu astucia te hace escapar del laberinto del mago!\nDescarta 1 ración. Si no tienes raciones, pierdes 3 de salud.\nGanas 1 de oro.",
+    "option2": "¡Maldición! ¡No eres capaz de encontrar la salida!\nDescarta 2 raciones. Pierdes 3 de salud por cada ración que no puedas descartar.\nGanas 1 poción."
+  },
+  {
+    "img": "card_005.jpg",
+    "kind": "dungeon2",
+    "code": "D14",
+    "name": "Plantación de Setas",
+    "option1": "Has localizado una plantación de setas jóvenes.",
+    "option2": "Te encuentras con una plantación de setas maduras.",
+    "table1": [
+      {"dice": [1, 2], "text": "Ganas 1 ficha de veneno."},
+      {"dice": [3, 4], "text": "Ganas 1 ración."},
+      {"dice": [5, 6], "text": "Ganas 2 raciones."}
+    ],
+    "table2": [
+      {"dice": [1, 2], "text": "Ganas 1 ración."},
+      {"dice": [3, 4], "text": "Ganas 2 raciones."},
+      {"dice": [5, 6], "text": "Ganas 3 raciones."}
+    ]
+  },
+  {
+    "img": "card_006.jpg",
+    "kind": "dungeon2",
+    "code": "D15",
+    "name": "Trampa de Flechas",
+    "option1": "Tu curiosidad por la estatua de ojos de rubí tiene un coste.",
+    "option2": "Tu avaricia te hace ir cegado hasta una tormenta de flechas.",
+    "table1": [
+      {"dice": [1, 2], "text": "Ganas 2 fichas de veneno."},
+      {"dice": [3, 4], "text": "Ganas 1 ficha de veneno."},
+      {"dice": [5, 6], "text": "Ganas 0 fichas de veneno."}
+    ],
+    "table2": [
+      {"dice": [1, 2], "text": "Ganas 3 fichas de veneno."},
+      {"dice": [3, 4], "text": "Ganas 2 fichas de veneno."},
+      {"dice": [5, 6], "text": "Ganas 1 ficha de veneno."}
+    ]
+  },
+  {
+    "img": "card_007.jpg",
+    "kind": "dungeon2",
+    "code": "D16",
+    "name": "Escaramuza",
+    "option1": "¡Desenfundas tu arma y estás listo para el combate!\nRoba una carta de enemigo y añade a su salud el nivel de la mazmorra.",
+    "option2": "¡Te cogen desprevenido y tropiezas con tu arma!\nRoba una carta de enemigo y añade a su salud el nivel de la mazmorra +4.\nSi derrotas a este enemigo ganas 1 de oro adicional."
+  },
+  {
+    "img": "card_008.jpg",
+    "kind": "dungeon2",
+    "code": "D16",
+    "name": "Escaramuza",
+    "option1": "¡Desenfundas tu arma y estás listo para el combate!\nRoba una carta de enemigo y añade a su salud el nivel de la mazmorra.",
+    "option2": "¡Te cogen desprevenido y tropiezas con tu arma!\nRoba una carta de enemigo y añade a su salud el nivel de la mazmorra +4.\nSi derrotas a este enemigo ganas 1 de oro adicional."
+  },
+  {"img": "card_009.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"},
+  {"img": "card_010.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"},
+  {"img": "card_011.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"},
+  {"img": "card_012.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"},
+  {"img": "card_013.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"},
+  {"img": "card_014.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"},
+  {"img": "card_015.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"},
+  {"img": "card_016.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"},
+  {"img": "card_017.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"},
+  {
+    "img": "card_018.jpg",
+    "kind": "dungeon1",
+    "code": "D17",
+    "name": "Campamento",
+    "text": "Encuentras un lugar relativamente tranquilo para acampar, pero no tardarás en llamar la atención. Elige una de las siguientes acciones.\nCocinar\nGasta 1 ración para ganar 3 de energía.\n- o -\nBuscar\nGanas 1 ración y 1 de oro.\n- o -\nDescansar\nGasta 1 ración para ganar 3 de salud y perder 1 de veneno.",
+    "options": [
+      {"label": "Cocinar", "text": "Gasta 1 ración para ganar 3 de energía."},
+      {"label": "Buscar", "text": "Ganas 1 ración y 1 de oro."},
+      {"label": "Descansar", "text": "Gasta 1 ración para ganar 3 de salud y perder 1 de veneno."}
+    ]
+  },
+  {
+    "img": "card_019.jpg",
+    "kind": "dungeon1",
+    "code": "D18",
+    "name": "Mercader",
+    "text": "Las profundidades de una mazmorra parece un lugar extraño para instalar un bazar, pero ¿quién eres tú para cuestionar su cordura? Puedes realizar un trato con el mercader.\nComprar\nPara ver qué mercancías tiene el mercader, roba 3 cartas de botín y 2 cartas de poción.\nVender\nEl comerciante te comprará los objetos que no quieras por 1 de oro cada uno.\nComerciar\nPuedes intercambiar cualquier objeto que tengas con un objeto que tenga el mercader, siempre que el objeto que le entregues tenga un valor superior al que recibas.",
+    "options": [
+      {"label": "Comprar", "text": "Para ver qué mercancías tiene el mercader, roba 3 cartas de botín y 2 cartas de poción."},
+      {"label": "Vender", "text": "El comerciante te comprará los objetos que no quieras por 1 de oro cada uno."},
+      {"label": "Comerciar", "text": "Puedes intercambiar cualquier objeto que tengas con un objeto que tenga el mercader, siempre que el objeto que le entregues tenga un valor superior al que recibas."}
+    ]
+  },
+  {
+    "img": "card_020.jpg",
+    "kind": "dungeon1",
+    "code": "D19",
+    "name": "Altar",
+    "text": "A veces, se puede encontrar un santuario en el lugar más insospechado.\nTe dejas caer de rodillas frente al altar y rezas por...?\nUna Bendición\nGanas 1 ficha de bendición.\n- o por...-\nFuerza\nGanas 2 de energía.\n- o por...-\nCuración\nDescarta d6-d6 fichas de veneno.\n- o por...-\nMerced\nSube un nivel en el control de moral.",
+    "options": [
+      {"label": "Una Bendición", "text": "Ganas 1 ficha de bendición."},
+      {"label": "Fuerza", "text": "Ganas 2 de energía."},
+      {"label": "Curación", "text": "Descarta d6-d6 fichas de veneno."},
+      {"label": "Merced", "text": "Sube un nivel en el control de moral."}
+    ]
+  },
+  {
+    "img": "card_021.jpg",
+    "kind": "dungeon1",
+    "code": "D20",
+    "name": "Claro",
+    "text": "En un claro puede ocurrir cualquier cosa...\nRoba una carta de trama y resuélvela."
+  },
+  {
+    "img": "card_022.jpg",
+    "kind": "dungeon1",
+    "code": "D21",
+    "name": "Arcángel",
+    "text": "Ante ti se manifiesta un destello de luz sagrada que te produce escalofríos. Cuando el resplandor se desvanece, ves el rostro de una mujer provista de grandes alas. Es el arcángel que ha venido a juzgar tus actos. Comprueba tu posición en el control de moral y consulta siguiente tabla.\n4/5 Ganas 4 de salud.\n2/3 Ganas 2 de salud.\n1 Ganas 1 de salud.\n0 No ocurre nada.\n-1 Pierdes 1 de salud.\n-2/-3 Pierdes 2 de salud.\n-4/-5 Pierdes 4 de salud.",
+    "table": [
+      {"moral": ["4", "5"], "text": "Ganas 4 de salud."},
+      {"moral": ["2", "3"], "text": "Ganas 2 de salud."},
+      {"moral": ["1"], "text": "Ganas 1 de salud."},
+      {"moral": ["0"], "text": "No ocurre nada."},
+      {"moral": ["-1"], "text": "Pierdes 1 de salud."},
+      {"moral": ["-2", "-3"], "text": "Pierdes 2 de salud."},
+      {"moral": ["-4", "-5"], "text": "Pierdes 4 de salud."}
+    ],
+    "note": "La tabla no usa dados sino la posición en el control de moral (valores en magenta: 4/5, 2/3, 1, 0, -1, -2/-3, -4/-5)."
+  },
+  {
+    "img": "card_023.jpg",
+    "kind": "dungeon1",
+    "code": "D22",
+    "name": "Ídolo Falso",
+    "text": "Tus ojos se clavan en una enorme y diabólica estatua tallada en la roca. Ruega ser adorada. ¿Qué vas a hacer?\nSuplicar Poder\nBaja un nivel en el control de moral. Ganas 2 de energía y 1 carta de botín.\nSuplicar Riqueza\nBaja un nivel en el control de moral. Ganas 2 de oro y 1 poción.\nSuplicar Por Tu Vida\nBaja un nivel en el control de moral. Ganas 2 de salud y 1 ración.\nIgnorar el Falso Ídolo\nSube un nivel en el control de moral. Pierdes 1 de salud.",
+    "options": [
+      {"label": "Suplicar Poder", "text": "Baja un nivel en el control de moral. Ganas 2 de energía y 1 carta de botín."},
+      {"label": "Suplicar Riqueza", "text": "Baja un nivel en el control de moral. Ganas 2 de oro y 1 poción."},
+      {"label": "Suplicar Por Tu Vida", "text": "Baja un nivel en el control de moral. Ganas 2 de salud y 1 ración."},
+      {"label": "Ignorar el Falso Ídolo", "text": "Sube un nivel en el control de moral. Pierdes 1 de salud."}
+    ]
+  },
+  {
+    "img": "card_024.jpg",
+    "kind": "dungeon1",
+    "code": "D23",
+    "name": "Fuente Mística",
+    "text": "Ante ti se alza una imponente fuente y te sientes atraído hacia ella por un poderoso encanto. Con los ojos muy abiertos, tomas algo de agua caliente con las manos y te la llevas a los labios...\nRoba una carta de enemigo y añade el nivel de la mazmorra a su valor de salud.\nTe arrepientes inmediatamente de tus actos. Ganas 1 ficha de veneno.\n¡Qué suerte! Encuentras 1 de oro.\nDe repente, te sientes revitalizado. Ganas 3 de salud.\n¡Se te concede un presente! Ganas 1 poción.\nGanas una cantidad de fichas de bendición igual a nivel de mazmorra en el que estés.",
+    "table": [
+      {"dice": [1], "text": "Roba una carta de enemigo y añade el nivel de la mazmorra a su valor de salud."},
+      {"dice": [3], "text": "Te arrepientes inmediatamente de tus actos. Ganas 1 ficha de veneno."},
+      {"dice": [5], "text": "¡Qué suerte! Encuentras 1 de oro."},
+      {"dice": [2], "text": "De repente, te sientes revitalizado. Ganas 3 de salud."},
+      {"dice": [4], "text": "¡Se te concede un presente! Ganas 1 poción."},
+      {"dice": [6], "text": "Ganas una cantidad de fichas de bendición igual a nivel de mazmorra en el que estés."}
+    ],
+    "note": "Las filas de la tabla de d6 están impresas en el orden 1, 3, 5, 2, 4, 6 (no correlativo)."
+  },
+  {
+    "img": "card_025.jpg",
+    "kind": "dungeon2",
+    "code": "D24",
+    "name": "Encuentro Salvaje",
+    "option1": "¡Ante ti se alza un formidable enemigo!\nRoba 2 cartas de enemigo y descarta al que tenga menos salud *. Debes luchar contra el enemigo que permanezca, añadiendo a su salud el nivel de mazmorra +1.\n*En caso de empate, el jugador elige.",
+    "option2": "¡No hay escapatoria ante esta terrible criatura!\nRoba 4 cartas de enemigo y descarta a los 3 que tengan menos salud*. Debes luchar contra el enemigo que permanezca, añadiendo a su salud el nivel de mazmorra +3.\n*En caso de empate, el jugador elige."
+  },
+  {
+    "img": "card_026.jpg",
+    "kind": "dungeon2",
+    "code": "D24",
+    "name": "Encuentro Salvaje",
+    "option1": "¡Ante ti se alza un formidable enemigo!\nRoba 2 cartas de enemigo y descarta al que tenga menos salud *. Debes luchar contra el enemigo que permanezca, añadiendo a su salud el nivel de mazmorra +1.\n*En caso de empate, el jugador elige.",
+    "option2": "¡No hay escapatoria ante esta terrible criatura!\nRoba 4 cartas de enemigo y descarta a los 3 que tengan menos salud*. Debes luchar contra el enemigo que permanezca, añadiendo a su salud el nivel de mazmorra +3.\n*En caso de empate, el jugador elige."
+  },
+  {"img": "card_027.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"},
+  {"img": "card_028.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"},
+  {"img": "card_029.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"},
+  {"img": "card_030.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"},
+  {"img": "card_031.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"},
+  {"img": "card_032.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"},
+  {"img": "card_033.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"},
+  {"img": "card_034.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"},
+  {"img": "card_035.jpg", "kind": "divider", "name": "Puerta azul (relleno, sin rótulo)", "deck": "other"}
+]

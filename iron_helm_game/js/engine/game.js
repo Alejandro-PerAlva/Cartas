@@ -7,14 +7,17 @@
  *    `g.ask(tipo, datos)`: el motor se detiene hasta que llega la acción correspondiente (`g.act`).
  *  - Todo lo que ocurre se emite como EVENTOS (`g.on(fn)`); la interfaz los anima. El motor nunca espera a la UI.
  *
- * Los demás módulos (combat.js, scenes.js, items.js) extienden el prototipo de Game.
+ * Los demás módulos (combat.js, scenes.js, items.js, expansions.js) extienden el prototipo de Game.
  */
 import { RNG } from './rng.js';
-import { buildCatalog } from './catalog.js';
+import { buildCatalog, normName } from './catalog.js';
 
 export const SLOTS = ['MP', 'OM', 'CA', 'CP'];
 export const CAPS = { energy: 14, rations: 10, poison: 10 };
 export const WEAKNESS_ORDER = ['fire', 'undead', 'ice']; // Fuego vence a No muerto, No muerto a Hielo, Hielo a Fuego
+export const MAX_MERCS = 3;
+/** Pérdidas de salud voluntarias (no son "daño recibido" para Matilda) */
+const VOLUNTARY_HP = new Set(['furia', 'ataque', 'pago', 'portador', 'kroling', 'bastón']);
 
 export class Game {
   constructor(cat, s, rng) {
@@ -31,18 +34,21 @@ export class Game {
     const cat = buildCatalog(config);
     const rng = new RNG(seed);
     const heroDef = cat.pools.heroes.find((h) => h.id === heroId);
-    if (!heroDef) throw new Error(`Héroe desconocido: ${heroId}`);
+    if (!heroDef) throw new Error(heroId === 'custom' ? 'Para un personaje personalizado indica config.custom {race, klass, sign, skill, equipment}' : `Héroe desconocido: ${heroId}`);
     const s = {
-      v: 2, seed, config: cat.cfg, heroId, godMode, nextUid: 1, cards: {},
+      v: 3, seed, config: cat.cfg, heroId, godMode, nextUid: 1, cards: {},
       prompt: null, over: null, level: 1, turn: 0, eyes: 0, log: [], stats: { kills: 0, turns: 0 },
+      adventureLevel: cat.adventureLevel, env: null, mercs: [], artifactsBought: 0, encounter: null,
       hero: {
         name: heroDef.name, maxHp: heroDef.health, hp: heroDef.health, energy: heroDef.energy, rations: heroDef.rations,
-        gold: heroDef.gold, poison: 0, blessings: [], morality: 0, encumbrance: heroDef.encumbrance,
+        gold: heroDef.gold, poison: 0, blessings: [], morality: heroDef.morality || 0, encumbrance: heroDef.encumbrance,
         proficiency: heroDef.proficiency, skills: [], skillCards: {}, afflictions: [], divinidad: 'energy', carryBonus: 0,
+        scoreBonus: heroDef.finalScoreBonus || 0, race: heroDef.race || null, custom: heroDef.custom || null,
       },
       z: { dungeon: [], dungeonDiscard: [], pair: [null, null], enemies: [], enemiesDiscard: [], loot: [], lootDiscard: [],
         potions: [], potionsDiscard: [], plots: [], plotsPlayed: [], trappings: [], skills: [], afflictions: [], afflictionsDiscard: [],
-        bosses: [], graveyard: [], hand: [], blessingPile: [], removed: [] },
+        bosses: [], graveyard: [], hand: [], blessingPile: [], removed: [],
+        environments: [], environmentsDiscard: [], artifacts: [], artifactsDiscard: [], mercenaries: [], adventure: [] },
       eq: { MP: null, OM: null, CA: null, CP: null, AC: [] },
       lvl: {},       // banderas del nivel actual (anillo usado, lámpara, trofeo...)
       game: {},      // banderas de la partida (pozo bebido, etc.)
@@ -74,19 +80,45 @@ export class Game {
     s.z.skills = mkAll(p.skills);
     s.z.afflictions = rng.shuffle(mkAll(p.afflictions));
     s.z.bosses = mkAll(p.bosses);
+    if (cat.extras.environments) s.z.environments = rng.shuffle(mkAll(p.environments));
+    if (cat.extras.artifacts) s.z.artifacts = rng.shuffle(mkAll(p.artifacts));
+    if (cat.extras.mercenaries) s.z.mercenaries = mkAll(p.mercs.map((d) => ({ ...d, copies: 1 })));
+    if (cat.extras.encounters) {
+      // Iron Chest: mapa de encuentros del nivel de la aventura (hay dos copias idénticas; se elige una al azar)
+      const maps = p.adventures.filter((a) => a.level === s.adventureLevel);
+      const def = maps.length ? maps[0] : null;
+      if (def) {
+        const imgs = def.imgs || [def.img];
+        const uid = this.mk(def.id, imgs[rng.int(imgs.length)]);
+        s.z.adventure = [uid];
+        s.encounter = { map: uid };
+      }
+    }
     // fichas de bendición: 12, boca abajo y barajadas (caras: salud / energía / veneno)
     const faces = [{ k: 'hp', n: 1 }, { k: 'hp', n: 1 }, { k: 'hp', n: 2 }, { k: 'hp', n: 2 }, { k: 'hp', n: 3 },
       { k: 'en', n: 1 }, { k: 'en', n: 1 }, { k: 'en', n: 2 }, { k: 'en', n: 2 }, { k: 'en', n: 3 },
       { k: 'cure', n: 0 }, { k: 'cure', n: 0 }];
     s.z.blessingPile = rng.shuffle(faces);
 
-    // equipo y habilidades iniciales
+    // equipo y habilidades iniciales (si la carta no está en ningún mazo activo se inyecta como objeto propio)
     for (const id of heroDef.trappings) {
-      const uid = this._takeFromDeck('trappings', id);
-      if (uid) this.acquire(uid, { silent: true, noWeightCheck: true });
+      const uid = this._takeFromDeck('trappings', id) || this.mk(id);
+      this.acquire(uid, { silent: true, noWeightCheck: true });
     }
     for (const id of heroDef.skills) this._learnSkillFree(id);
-    this.ask('setup', {});
+    if (heroDef.potion) { // Gnomo: poción elegida en la creación
+      const uid = this._takeFromDeck('potions', heroDef.potion) || this.mk(heroDef.potion);
+      this.acquire(uid, { silent: true, noWeightCheck: true });
+    }
+    this._askSetup();
+  }
+
+  /** Petición de preparación (tienda de equipo y, con La Posada del Troll Solitario, contratación de esbirros). */
+  _askSetup() {
+    // candidates = todos los esbirros de la posada (los contratados también; se distinguen por `hired`)
+    const inn = this.cat.extras.mercenaries
+      ? { candidates: [...this.s.z.mercenaries, ...this.s.mercs.map((m) => m.uid)].sort((a, b) => a - b), hired: this.s.mercs.map((m) => m.uid), max: MAX_MERCS } : null;
+    this.ask('setup', { shop: true, inn });
   }
 
   /* ============================================================================ eventos y utilidades */
@@ -158,6 +190,8 @@ export class Game {
   get hero() { return this.s.hero; }
   maxHp() { return this.hero.maxHp + this.sumFx('maxHpBonus'); }
   maxWeight() { return this.hero.encumbrance + this.hero.carryBonus + this.sumFx('carryBonus'); }
+  /** ¿El héroe es de esta raza? (Gnome Pack) */
+  isRace(name) { return !!this.hero.race && normName(this.hero.race) === normName(name); }
 
   /** cambio de una estadística con topes; emite evento 'stat' */
   _setStat(stat, to, cause) {
@@ -182,7 +216,10 @@ export class Game {
     const from = this._getStat(stat);
     const to = Math.min(cap, from + n);
     this._setStat(stat, to, cause);
-    return to - from;
+    const got = to - from;
+    // Mediano: cada ración ganada da también 1 de salud
+    if (stat === 'rations' && got > 0 && this.isRace('Mediano')) { this.gain('hp', got, 'mediano'); this.log(`Mediano: +${got} de salud por las raciones.`, 'skill'); }
+    return got;
   }
   lose(stat, n, cause = '') {
     if (n <= 0) return 0;
@@ -191,9 +228,11 @@ export class Game {
     if (stat === 'hp' && this.s.godMode) return 0;
     const to = Math.max(0, from - n);
     this._setStat(stat, to, cause);
+    if (stat === 'hp' && n >= 3 && !VOLUNTARY_HP.has(cause)) this._mercHurt?.(n);
     return from - to;
   }
   gainBlessing(n, cause = '') {
+    if (this.hasSkill('S21')) { this.log('Drenaje Vital: no puedes ganar fichas de bendición.', 'skill'); return 0; }
     let got = 0;
     for (let i = 0; i < n; i++) {
       if (!this.s.z.blessingPile.length) break;
@@ -217,6 +256,14 @@ export class Game {
   }
   /** posición efectiva en el marcador de moral (con bonificaciones de objetos) */
   morality() { return this.hero.morality + this.sumFx('moralityBonus'); }
+  /** ganar ojos (tramas, enemigos, entornos); Farzad pierde 1 de moral por cada uno */
+  addEyes(n, uid = null) {
+    if (n <= 0) return;
+    this.s.eyes += n;
+    this.emit('eyes', { uid, eyes: this.s.eyes });
+    this.log(`+${n} ojo(s) · ${this.s.eyes}/10`, 'plot');
+    this._mercEyes?.(n);
+  }
 
   /** Comprueba muerte por salud o veneno. Devuelve true si el héroe ha muerto. */
   checkDeath() {
@@ -244,7 +291,7 @@ export class Game {
   rollOne(purpose = '', who = 'hero') { return this.roll(1, purpose, who)[0]; }
 
   /* ============================================================================ efectos activos */
-  /** Cartas activas con efecto: equipadas, habilidades conocidas y aflicciones. */
+  /** Cartas activas con efecto: equipadas, habilidades conocidas, aflicciones y esbirros contratados. */
   activeSources() {
     const out = [];
     const e = this.s.eq;
@@ -252,6 +299,7 @@ export class Game {
     for (const u of e.AC) out.push({ uid: u, def: this.def(u), slot: 'AC' });
     for (const id of this.hero.skills) out.push({ uid: null, def: this.cat.def(id), slot: 'skill' });
     for (const u of this.hero.afflictions) out.push({ uid: u, def: this.def(u), slot: 'affliction' });
+    for (const m of this.s.mercs || []) out.push({ uid: m.uid, def: this.def(m.uid), slot: 'merc' });
     return out;
   }
   sumFx(key, filter = () => true) {
@@ -259,10 +307,11 @@ export class Game {
     for (const src of this.activeSources()) { const v = src.def.fx?.[key]; if (typeof v === 'number' && filter(src)) n += v; }
     return n;
   }
-  hasCode(code) { return this.activeSources().some((x) => x.def.code === code); }
-  hasSkill(code) { return this.hero.skills.some((id) => this.cat.def(id).code === code); }
-  hasAffliction(code) { return this.hero.afflictions.some((u) => this.def(u).code === code); }
-  equippedUid(code) { const x = this.activeSources().find((s) => s.def.code === code && s.uid); return x ? x.uid : null; }
+  hasCode(code) { return this.activeSources().some((x) => x.def.key === code); }
+  hasSkill(code) { return this.hero.skills.some((id) => this.cat.def(id).key === code); }
+  hasAffliction(code) { return this.hero.afflictions.some((u) => this.def(u).key === code); }
+  hasMerc(code) { return (this.s.mercs || []).some((m) => this.def(m.uid).key === code); }
+  equippedUid(code) { const x = this.activeSources().find((s) => s.def.key === code && s.uid && s.slot !== 'merc'); return x ? x.uid : null; }
   mainWeapon() { const u = this.s.eq.MP; return u ? { uid: u, def: this.def(u) } : null; }
   offHand() { const u = this.s.eq.OM; return u ? { uid: u, def: this.def(u) } : null; }
   twoHanded() { const u = this.s.eq.MP; return !!u && this.def(u).slot === '2M'; }
@@ -298,8 +347,13 @@ export class Game {
   acquire(uid, { silent = false, noWeightCheck = false } = {}) {
     const d = this.def(uid);
     this.emit('gainCard', { uid, silent });
+    if (d.fx?.instant) { // cartas que se resuelven al robarlas (Alijo de Mizlak, Boñiga de Dragón)
+      this.s.z[this.pileFor(d)].push(uid);
+      this.insert(function instant() { this._instantItem(uid); });
+      return;
+    }
     if (d.slot === 'AC') { this.s.eq.AC.push(uid); this.emit('equip', { uid, slot: 'AC', auto: true }); }
-    else if (!this.s.combat && this._canAutoEquip(d) && this._slotFree(d)) this._equipInto(uid, d);
+    else if (d.slot && !this.s.combat && this._canAutoEquip(d) && this._slotFree(d)) this._equipInto(uid, d);
     else this.s.z.hand.push(uid);
     if (d.fx?.maxHpBonus) this.emit('stat', { stat: 'maxhp', from: 0, to: this.maxHp() });
     if (!noWeightCheck) this.insert(this._weightCheck);
@@ -328,6 +382,7 @@ export class Game {
     if (this.s.combat) this.fail('No puedes cambiar de equipo durante un combate.');
     const idx = this.s.z.hand.indexOf(uid);
     if (idx < 0) this.fail('Ese objeto no está en tu mano.');
+    if (!d.slot) this.fail(`${d.name} no se puede equipar.`);
     if (d.slot === 'AC') { this.s.z.hand.splice(idx, 1); e.AC.push(uid); this.emit('equip', { uid, slot: 'AC' }); return; }
     // comprobar antes de mover nada (los objetos malditos no se pueden quitar)
     const blockers = [];
@@ -366,7 +421,10 @@ export class Game {
     if (this.s.combat) this.fail('No puedes cambiar de equipo durante un combate.');
     const e = this.s.eq;
     const ai = e.AC.indexOf(uid);
-    if (ai >= 0) { e.AC.splice(ai, 1); this.s.z.hand.push(uid); this.emit('unequip', { uid, slot: 'AC' }); return; }
+    if (ai >= 0) {
+      if (this.def(uid).fx?.cursed) this.fail(`${this.def(uid).name} está maldito: no puedes quitártelo.`);
+      e.AC.splice(ai, 1); this.s.z.hand.push(uid); this.emit('unequip', { uid, slot: 'AC' }); return;
+    }
     for (const slot of ['MP', 'OM', 'CA', 'CP']) if (e[slot] === uid) { this._unequipSlot(slot); return; }
     this.fail('Ese objeto no está equipado.');
   }
@@ -381,12 +439,20 @@ export class Game {
     return false;
   }
   _clampHp() { const m = this.maxHp(); if (this.hero.hp > m) this._setStat('hp', m, 'máximo'); }
+  /** pila de descarte que corresponde a una carta de objeto */
+  pileFor(d) { return d.deck === 'potion' ? 'potionsDiscard' : d.deck === 'trapping' ? 'removed' : d.deck === 'artifact' ? 'artifactsDiscard' : 'lootDiscard'; }
   /** descarta un objeto del héroe al mazo de descarte que le corresponda */
   discardOwned(uid, why = 'discard') {
     if (!this.removeOwned(uid)) return false;
     const d = this.def(uid);
-    const pile = d.deck === 'potion' ? 'potionsDiscard' : d.deck === 'trapping' ? 'removed' : 'lootDiscard';
-    this.s.z[pile].push(uid);
+    this.s.z[this.pileFor(d)].push(uid);
+    this.emit('discardCard', { uid, why });
+    return true;
+  }
+  /** destruye un objeto del héroe (sale de la partida) */
+  destroyOwned(uid, why = 'destroyed') {
+    if (!this.removeOwned(uid)) return false;
+    this.s.z.removed.push(uid);
     this.emit('discardCard', { uid, why });
     return true;
   }
@@ -394,7 +460,8 @@ export class Game {
   /* ============================================================================ robar de mazos */
   draw(deck) {
     const z = this.s.z;
-    const disc = { enemies: 'enemiesDiscard', loot: 'lootDiscard', potions: 'potionsDiscard', plots: 'plotsPlayed', afflictions: 'afflictionsDiscard' }[deck];
+    const disc = { enemies: 'enemiesDiscard', loot: 'lootDiscard', potions: 'potionsDiscard', plots: 'plotsPlayed', afflictions: 'afflictionsDiscard',
+      environments: 'environmentsDiscard', artifacts: 'artifactsDiscard' }[deck];
     if (!z[deck].length && disc && deck !== 'plots') {
       z[deck] = this.rng.shuffle(z[disc].splice(0));
       this.emit('reshuffle', { deck });
@@ -409,10 +476,11 @@ export class Game {
   _learnSkillFree(id) {
     if (!this.hero.skills.includes(id)) this.hero.skills.push(id);
     const i = this.s.z.skills.findIndex((u) => this.s.cards[u].id === id);
-    const uid = i >= 0 ? this.s.z.skills.splice(i, 1)[0] : null;
+    let uid = i >= 0 ? this.s.z.skills.splice(i, 1)[0] : null;
+    if (!uid && !this.hero.skillCards[id]) uid = this.mk(id); // habilidad de una expansión inactiva (inyectada)
     if (uid) this.hero.skillCards[id] = uid;
     this.emit('learnSkill', { id, uid, free: true });
-    if (this.cat.def(id).code === 'S2') this._alchemyStart = true;
+    if (this.cat.def(id).key === 'S2') this._alchemyStart = true;
   }
   skillCost(skillId) { return this.cat.def(skillId).proficiency === this.hero.proficiency ? 3 : 5; }
   unspentEnemies() { return this.s.z.graveyard.filter((e) => !e.spent); }
@@ -425,7 +493,7 @@ export class Game {
     for (const e of this.s.z.graveyard) { if (n > 0 && !e.spent) { e.spent = true; n--; } }
     this._learnSkillFree(skillId);
     this.log(`Aprendes la habilidad ${this.cat.def(skillId).name}.`, 'skill');
-    if (this.cat.def(skillId).code === 'S2') this._grantAlchemy();
+    if (this.cat.def(skillId).key === 'S2') this._grantAlchemy();
   }
   _grantAlchemy() { this.insert(this._grantAlchemyTask); }
   _grantAlchemyTask() { this._pickFromDeck('potions', 2, 'Alquimia: elige 2 pociones'); }
@@ -436,8 +504,9 @@ export class Game {
     const items = this.allItems().reduce((n, u) => n + (this.def(u).price || 0), 0);
     const parts = {
       hp: h.hp, energy: h.energy, gold: h.gold * 3, enemies: this.s.z.graveyard.length * 2, items,
-      level: Math.min(5, this.s.level), morality: this.morality(),
+      level: Math.min(5, this.s.level) * 2, morality: this.morality(),
     };
+    if (h.scoreBonus) parts.bonus = h.scoreBonus; // Mizlak el Mendigo: +10 si completas la partida
     const total = Object.values(parts).reduce((a, b) => a + b, 0);
     const ranks = [[61, 'Fortaleza'], [51, 'Mansión'], [41, 'Granja'], [31, 'Cabaña'], [0, 'Tugurio']];
     const rank = ranks.find(([min]) => total >= min)[1];
@@ -467,6 +536,11 @@ ACTIONS.begin = {
   run() {
     this.clear();
     if (this.hasSkill('S2') && !this.s.game.alchemy) { this.s.game.alchemy = true; this.push(this._grantAlchemyTask); }
+    // Gnomo: empieza con 1 poción a su elección (si no la eligió al crearlo)
+    if (this.isRace('Gnomo') && !this.cat.pools.heroes.find((h) => h.id === this.s.heroId)?.potion && !this.s.game.gnomePotion) {
+      this.s.game.gnomePotion = true;
+      this.push(function gnomePotion() { this._pickFromDeck('potions', 1, 'Gnomo: elige 1 poción para empezar'); });
+    }
     this.push(this.startLevel);
   },
 };
@@ -481,7 +555,7 @@ ACTIONS.buy = {
     this.lose('gold', d.price, 'compra');
     this.log(`Compras ${d.name} por ${d.price} de oro.`, 'inv');
     this.acquire(uid);
-    this.clear(); this.insert(function back() { this.ask('setup', {}); });
+    this.clear(); this.insert(function back() { this._askSetup(); });
   },
 };
 ACTIONS.sellTrapping = {
@@ -489,11 +563,12 @@ ACTIONS.sellTrapping = {
   run({ uid }) {
     const d = this.def(uid);
     if (d.deck !== 'trapping') this.fail('Solo puedes devolver equipo inicial.');
+    if (d.fx?.cursed) this.fail(`${d.name} está maldito.`);
     if (!this.removeOwned(uid)) this.fail('No tienes ese objeto.');
     this.s.z.trappings.push(uid);
     this.gain('gold', d.price, 'devolución');
     this.emit('returnCard', { uid });
-    this.clear(); this.insert(function back() { this.ask('setup', {}); });
+    this.clear(); this.insert(function back() { this._askSetup(); });
   },
 };
 
