@@ -14,7 +14,9 @@
  * mismo código, `paquete:código` (`galnok:T21`). Ver tools/gen-data.mjs.
  */
 
-/* ================================================================================================ PACKS */
+/* ================================================================================================ PACKS
+ * type: 'campaign' | 'module' | 'mode'.  Un `mode` (modo fanmade, p. ej. ANEMIA 4.0) se activa como un módulo (va en
+ * `config.modules`) pero la interfaz lo muestra en su propia sección «Modos fanmade». */
 export const PACKS = [
   {
     id: 'warren', name: 'Warren of Despair', es: 'Laberinto de la Desesperación', type: 'campaign', number: 1, adventureLevel: 2,
@@ -98,6 +100,14 @@ export const PACKS = [
     blurb: 'Crea tu propio personaje combinando raza, clase y signo astral. Incluye a Grubrot.',
     rules: ['Creador de personajes: raza → clase → signo astral.', 'Héroe Grubrot.'],
   },
+  {
+    id: 'anemia', name: 'ANEMIA 4.0', es: 'Anemia 4.0', type: 'mode', number: 16,
+    blurb: 'Expansión fanmade de Matthew Biddle (Aizen Myo 4U): nuevos héroes, jefes, enemigos, tramas, entornos y un puñado de reglas variantes opcionales.',
+    rules: ['Héroes La Bestia, Mae, Samurái, Thorn y Gene Slash; esbirros David Galahad y Gral el Pirata.',
+      'Enemigos y peligros nuevos (Mutante, Arenas Movedizas, Poza de Ácido…), 22 tramas, 4 entornos del Oeste y 6 jefes finales.',
+      'Pociones, habilidades, equipo y aflicciones nuevas (Amnesia, Fiebre del Oro, Adrenalina).',
+      'Incluye 15 reglas variantes que se activan por separado: Diablillo, Pueblo de Origen, Hogar Soñado, Sin Retorno, Enfrentarse a La Parca, Metal Inmortal…'],
+  },
 ];
 
 /* Expansiones del registro oficial cuyas cartas NO están en este repositorio (no jugables todavía). */
@@ -113,6 +123,9 @@ export const MISSING_PACKS = [];
  *   doublePoisonOnInitialHit  noDamageAttack (avispa)  noMissOnDoubles  doublesHitDie  damageByMorality  initialPlusBlessings
  *   doubleInitialIfAmbush2  nextAttackExtraEnergy  killWithLight  potionInsteadOfLoot  potionImmune  immune:[holy|fire|ice]
  *   afflictionOnInitialDamage  afflictionOnOnes:n  afflictionOnEnemyDoubles  trap
+ *   (ANEMIA) rerollDoubles  doublesHitPlus:n  energyDuel:{base,die,step}  noDamage  halveUndeadBonus  loseWeaponUnder:n  doubleVsBare
+ *   dodge:n  timeLord  mutant  escapeOnZero  avoidGrows:n  silverKill:clave  coinKill:clave  attackPenalty:n  hazard:'gas'|'sand'|'acid'
+ *   stealRation  femaleNoInitial  freeAvoid  sticky  counterTwice
  * ---------------------------------------------------------------------------------------------- */
 export const POWERS = {
   // Warren of Despair
@@ -163,6 +176,27 @@ export const POWERS = {
   E31: { poisonOnHit: 1 },
   E32: { loseBlessingOnHit: 1 },
   E33: { blessingsByMoralityOnDefeat: true },
+  // ANEMIA 4.0 (claves propias ANxx: la carta no imprime código)
+  ANB1: { rerollDoubles: true },                                        // La Parca
+  ANB2: { doublesHitDie: true, doublesHitPlus: 1 },                     // Malnok
+  ANB3: { energyDuel: { base: 10, die: 6, step: 2 }, noDamage: true },  // Tzxefytd: sin salud, solo energía
+  ANB4: { halveUndeadBonus: true },                                     // El Rey de los Muertos
+  ANB5: { loseWeaponUnder: 2 },                                         // El Reptiliano
+  ANB6: { doubleVsBare: true },                                         // Gigante de los Hielos
+  ANB7: { dodge: 5 },                                                   // Samurái de las Sombras
+  ANB8: { timeLord: true },                                             // El Señor del Tiempo
+  ANE1: { mutant: true },                                               // Mutante
+  ANE2: { escapeOnZero: true },                                         // Asesino Sigiloso
+  ANE4: { avoidGrows: 1 },                                              // Ogro
+  ANE5: { silverKill: 'T20', coinKill: 'L30' },                         // Hombre Lobo
+  ANE6: { attackPenalty: 2 },                                           // Perro No Muerto
+  ANE7: { trap: true, hazard: 'gas' },                                  // Nube Gaseosa
+  ANE8: { trap: true, hazard: 'sand' },                                 // Arenas Movedizas
+  ANE9: { trap: true, hazard: 'acid' },                                 // Poza de Ácido
+  ANE10: { stealRation: true },                                         // Hombre Cerdo
+  ANE11: { femaleNoInitial: true, freeAvoid: true },                    // Centauro
+  ANE12: { sticky: true },                                              // Masa Ósea
+  ANPT16: { counterTwice: true },                                       // Unicornio Bicéfalo
 };
 
 /* ================================================================================================ FX
@@ -251,6 +285,30 @@ export const FX = {
 /* Efectos de aflicciones (Bestias y Trabas); el resto de sus reglas se comprueban por código en el motor. */
 FX.AF2 = { carryBonus: -2 };
 
+/* ANEMIA 4.0: equipo, habilidades y esbirros. Lo que no es declarativo se resuelve en js/engine/anemia.js por la clave. */
+Object.assign(FX, {
+  ANT1: { attackBonus: 1 },                                   // Guitarra Hacha
+  ANT2: { reduceInitial: 1 },                                 // Chaqueta con Tachuelas
+  ANT4: { attackBonus: 1 },                                   // Espada de Appleton
+  ANT5: { finishAtOne: true },                                // Espada Samurái: deja al enemigo con 1 de salud → muere
+  ANS1: { poisonImmune: true, maxHpBonus: 7, hpOnLearn: 7 },  // Sangre Envenenada
+  ANS3: { noBlessings: true, moralityOnLearn: -1, potionOnLearn: 1 },        // Artes Oscuras: moral −1, +1 poción, sin bendiciones
+  ANM1: { sling: 1 },                                         // David Galahad: 1 de daño con su honda antes del daño inicial
+  ANC2: { eatEnemy: true },                                   // La Bestia: puede comerse al enemigo derrotado (+2 de energía)
+});
+
+/* Heroínas ("si tu personaje es femenino", Centauro): por arte de la carta. El Gnome Pack no define género. */
+export const FEMALE_HEROES = new Set(['C3', 'C6', 'C10', 'C12', 'C13', 'C14', 'ANC3']);
+
+/* Poza de Ácido: lo que NO se pierde es lo «de metal, cristal o piedra» (interpretación por el arte y el nombre de cada carta). */
+export const HARD_ITEMS = new Set([
+  'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L12', 'L14', 'L15', 'L16', 'L17', 'L19', 'L22', 'L24', 'L28', 'L29', 'L30', 'L31', 'L32', 'L33', 'L37', 'L38',
+  'L40', 'L43', 'L44', 'L47', 'L49', 'L50', 'L18', 'L20', 'L25', 'L46', 'galnok:L25',
+  'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'T1', 'T5', 'T7', 'T11', 'T13', 'T14', 'T15', 'T16', 'T18', 'T19', 'T20', 'T21', 'T25', 'T26', 'T31', 'T32', 'T36', 'T38',
+  'AT3', 'AT4', 'AT5', 'AT6', 'AT7', 'AT9',
+  'ANT1', 'ANT3', 'ANT4', 'ANT5', 'ANP1', 'ANP2', 'ANP3', 'ANP4',
+]);
+
 /* ================================================================================================ PLOT_OPS
  * Operaciones de las tramas de expansión (las de base.js las llevan inline).
  *   options[i] = ops de la opción i · plot = ops de una trama sin elección · pre = ops antes de elegir
@@ -298,6 +356,30 @@ export const PLOT_OPS = {
   'spire:PT33': { options: [[['morality', 2], ['gain', 'blessing', 1]], [['gain', 'hp', 3], ['gain', 'energy', 2], ['morality', -2]]] },
   PT34: { options: [[['lightenTo', 8]], [['lose', 'hp', 2], ['lose', 'energy', 1]]] },
   PT35: { options: [[['potion', 1], ['gain', 'gold', 2], ['lose', 'energy', 1], ['morality', -1]], [['morality', 2]]] },
+  // --- ANEMIA 4.0 (ver js/engine/anemia.js para las operaciones nuevas) ---
+  ANPT1: { options: [[['fightSeries', 2, { onAll: [['morality', 1], ['dieTable', [
+    [1, [['lose', 'hp', 1]]], [[2, 3, 4, 5], []], [6, [['gain', 'energy', 1]]]]]] }]], [['lose', 'energy', 1], ['morality', -1]]] },
+  ANPT2: { plot: [['fight', { hpLevel: true }]] },
+  ANPT3: { options: [[['dieTable', [
+    [1, [['lose', 'hp', 4]]], [[2, 3, 4, 5], [['restoreAll']]], [6, [['gain', 'poison', 4]]]]]], []] },
+  ANPT4: { options: [[['latonAssemble']], []] },
+  ANPT5: { options: [[['spendDie', 'energy', 'hp'], ['morality', 1]], [['pay', 'gold', 2]]] },
+  ANPT6: { options: [[['tunnel', 'left']], [['tunnel', 'center']], [['tunnel', 'right']]] },
+  ANPT7: { options: [[['carryPenalty', 3], ['morality', 3]], [['morality', -2]]] },
+  ANPT8: { options: [[['bodySwap']], [['gain', 'energy', 1], ['morality', 1]]] },
+  ANPT9: { options: [[['pay', 'energy', 2], ['pay', 'hp', 1], ['pay', 'rations', 1], ['learnAnySkill'], ['gain', 'blessing', 1]], [['gain', 'energy', 1], ['gain', 'rations', 1]]] },
+  ANPT10: { options: [[['arena']]] },
+  ANPT11: { options: [[['lose', 'hp', 1], ['morality', -1]], [['gain', 'poison', 1], ['curse']]] },
+  ANPT12: { plot: [['vipers']] },
+  ANPT13: { options: [[['portal']], [['finalBoss']]] },
+  ANPT14: { options: [[['pay', 'energy', 2], ['gain', 'hp', 2], ['lose', 'poison', 1]], [['gain', 'blessing', 1]]] },
+  ANPT15: { plot: [['horde']] },
+  ANPT17: { options: [[['loseDie', 'hp'], ['loseDie', 'energy'], ['gain', 'blessing', 2]], [['pay', 'rations', 1]]] },
+  ANPT18: { plot: [['dieTable', [[[1, 2], [['delayed', 'poison', 1]]], [[3, 4], []], [[5, 6], [['delayed', 'hp', 1]]]]]] },
+  ANPT19: { options: [[['dieTable', [[1, []], [[2, 3, 4, 5], [['lose', 'hp', 1]]], [6, [['lose', 'hp', 2]]]]], ['lose', 'energy', 2]], [['lose', 'energy', 2], ['loot', 1]]] },
+  ANPT20: { options: [[['deal']]] },
+  ANPT21: { options: [[['loseSkill'], ['gain', 'blessing', 1], ['morality', 2]], [['morality', -1], ['lose', 'blessing', 1]]] },
+  ANPT22: { options: [[['lose', 'hp', 2], ['gainOver', 'energy', 3], ['gain', 'blessing', 1]], [['lose', 'energy', 2], ['morality', 1]]] },
 };
 
 /* ================================================================================================ ENV_FX
@@ -307,6 +389,7 @@ export const PLOT_OPS = {
  *   treasureGold · treasurePotion · treasureBlessing · goldOnDefeat · goldVs:{w:n} · potionOnDefeat · blessingOnDefeat ·
  *   ambushAsSecond · merchantToAmbush · arrowTrapDamage · labyrinthExtra · plotPick2 · bossAttackBonus ·
  *   onDraw: ops inmediatas (texto azul / ojo de EN8)
+ *   (ANEMIA) fightBefore:[tipos] noCook noLevelBonus noBellota noClearing bossBlessings:n roundDrain campEndLevel ambushAsSkirmish campNoSearch avoidBossRation
  * ---------------------------------------------------------------------------------------------- */
 export const ENV_FX = {
   EN1: { dmgAll: 1, campSearchRations: 1, mushroomsRations: 1 },
@@ -318,6 +401,11 @@ export const ENV_FX = {
   EN7: { onDraw: [['gain', 'blessing', 1]], treasurePotion: 1, altarHp: 3, blessingOnDefeat: 1 },
   EN8: { onDraw: [['eyes', 1]], campEyes: 1, treasureBlessing: 1 },
   EN9: { labyrinthExtra: 1, altarHpByMorality: true, bossAttackBonus: 2 },
+  // ANEMIA 4.0 (entornos del Oeste)
+  ANEN1: { fightBefore: ['camp', 'altar', 'mushrooms'], noCook: true, noLevelBonus: true },       // La Niebla
+  ANEN2: { dmgVs: { fire: 2 }, noBellota: true, noClearing: true, bossBlessings: 2 },              // El Reino Arborícola
+  ANEN3: { roundDrain: true, campEndLevel: true, dmgAll: -1 },                                     // Cielo Resquebrajado
+  ANEN4: { ambushAsSkirmish: true, onDraw: [['fight', { ambush: 'player', hpLevel: true }]], campNoSearch: true, avoidBossRation: true }, // La Ciudad Caída
 };
 
 /* ================================================================================================ DUNGEON_FX
@@ -363,3 +451,67 @@ export const DUNGEON_FX = {
     [[5], [['gain', 'gold', 1]]], [[6], [['blessingByLevel']]]] },
   D24: { 1: { draw: 2, hp: 1 }, 2: { draw: 4, hp: 3 } },
 };
+
+/* ================================================================================================ VARIANTS
+ * Reglas variantes del libro de ANEMIA 4.0 (reglamento 4.0). Se activan una a una con `config.variants = { id: true }`.
+ * `needsPack` = paquete que debe estar en `config.modules`; `needsModules` = módulos que deben estar activos; `exclusive` = ids
+ * incompatibles; `forcesHero` = id de héroe obligatorio. El comportamiento está en js/engine/variants.js (y anemia.js).
+ * ---------------------------------------------------------------------------------------------- */
+export const VARIANT_GROUPS = {
+  reglas: 'Nuevas reglas y variantes', desafios: 'Desafíos', muerte: 'Mirar a los ojos de la Muerte', mazmorra: 'Entornos temáticos',
+  narrativa: 'Narrativa', epilogos: 'Epílogos', aventura: 'Aventura suelta',
+};
+export const VARIANTS = [
+  { id: 'diablillo', group: 'reglas', name: 'El Diablillo', needsPack: null,
+    blurb: 'Partidas más difíciles: un diablillo te quita botín y pociones.',
+    rules: ['El Diablillo empieza sobre el mazo de Botín y, al robar cada par de cartas de mazmorra, avanza una posición: Botín → Pociones → fuera de ambos.',
+      'Si ganas una carta de botín o de poción y el Diablillo está sobre ese mazo, obtienes 1 carta menos de ese tipo (puede quedar en 0).'] },
+  { id: 'pueblo', group: 'reglas', name: 'Pueblo de Origen', needsPack: null,
+    blurb: 'Partidas más fáciles: tu pueblo natal te da un beneficio inicial.',
+    rules: ['Al empezar tiras un d6: 1 Thrawdin +1 de salud · 2 Victorsville +1 de energía · 3 Stubben +1 de carga · 4 Vandale +1 ración · 5 Appleton +1 de oro · 6 Mucktown +1 bendición.'] },
+  { id: 'motivacion', group: 'narrativa', name: 'Motivación', needsPack: null,
+    blurb: 'Algo de narrativa: por qué vuelves a la aventura.',
+    rules: ['Al empezar tiras un d6 y se te cuenta el motivo por el que tu personaje regresa a las aventuras. No tiene efecto sobre las reglas.'] },
+  { id: 'ceroEnergia', group: 'reglas', name: 'Cero Energía', needsPack: null,
+    blurb: 'Partidas más difíciles: el puñetazo ya no es seguro.',
+    rules: ['Atacar sin gastar energía (a puño limpio) exige una tirada d6: 1 fallas y pierdes 1 de salud · 2-3 impactas pero pierdes 1 de salud · 4 fallas · 5-6 impactas.'] },
+  { id: 'gastarXP', group: 'reglas', name: 'Gastar Puntos de Experiencia', needsPack: null,
+    blurb: 'Partidas más fáciles: cambia enemigos derrotados por salud o energía.',
+    rules: ['En vez de aprender una habilidad, puedes gastar 7 cartas de enemigo derrotado para aumentar en +1 tu salud máxima o tu energía máxima.'] },
+  { id: 'hogarSonado', group: 'desafios', name: 'Desafío: Hogar Soñado', needsPack: null, exclusive: ['sinRetorno'],
+    blurb: 'Reúne 30 monedas de oro para comprar la mansión de tus sueños.',
+    rules: ['Cuando aparece el jefe final, si tienes 30 o más monedas de oro puedes pagarlas para comprar tu mansión y ganar sin combatir; si no, debes luchar.'] },
+  { id: 'sinRetorno', group: 'desafios', name: 'Desafío: Sin Retorno', needsPack: null, exclusive: ['hogarSonado'],
+    blurb: 'Tres aventuras seguidas (niveles 1, 2 y 3) sin volver a la Posada.',
+    rules: ['Superas consecutivamente una aventura de nivel 1 (juego base), una de nivel 2 y una de nivel 3 sin pasar por la Posada (ni tienda ni esbirros nuevos entre ellas).',
+      'Conservas tu estado entre aventuras; solo puedes recuperarte en los Campamentos.', 'Recibes 25 monedas de oro adicionales para el recuento final.'] },
+  { id: 'justoAntesDeMorir', group: 'muerte', name: 'Justo Antes de Morir', needsPack: null,
+    blurb: 'Una vez por partida cambia la muerte por perder un brazo.',
+    rules: ['Si un ataque enemigo fuese a matarte puedes, una vez por partida, perder el uso de tu otra mano (OM) para siempre en lugar de perder esa salud.',
+      'No podrás portar nada en la otra mano ni usar armas a dos manos.'] },
+  { id: 'enfrentarseParca', group: 'muerte', name: 'Enfrentarse a La Parca', needsPack: 'anemia',
+    blurb: 'Al morir puedes combatir a La Parca para regresar al mundo de los vivos.',
+    rules: ['Al morir solo conservas las armas de tus manos (se pierden el resto de objetos y no puedes usar bendiciones) y combates a La Parca con salud y energía al máximo.',
+      'Si la derrotas vuelves con tus armas, habilidades y bendiciones, con el oro y las raciones iniciales; si pierdes, la aventura termina.'] },
+  { id: 'entornosTematicos', group: 'mazmorra', name: 'Entornos Temáticos', needsPack: null, needsModules: ['realms'],
+    blurb: 'El entorno de cada nivel depende del rumbo que tomas.',
+    rules: ['Al empezar tiras un d4 (1 Norte, 2 Este, 3 Sur, 4 Oeste) y el entorno de los niveles 1 a 3 sale de la tabla de ese rumbo (los del Oeste vienen en ANEMIA).',
+      'En los niveles 4 y 5 (que el libro no define) se roba un entorno al azar.'] },
+  { id: 'muertesAtroces', group: 'epilogos', name: 'Muertes Atroces', needsPack: null,
+    blurb: 'Epílogos truculentos si caes ante un jefe o un minijefe.',
+    rules: ['Si mueres en combate contra un jefe final o un minijefe se te cuenta cómo acaba tu personaje.'] },
+  { id: 'lugaresRetiro', group: 'epilogos', name: 'Lugares de Retiro', needsPack: null,
+    blurb: 'Una descripción del hogar al que te retiras según tu puntuación.',
+    rules: ['Al ganar se muestra el texto del lugar de retiro (Tugurio, Cabaña, Granja, Mansión o Fortaleza) que corresponde a tu puntuación final.'] },
+  { id: 'encantamientos', group: 'narrativa', name: 'Encantamientos', needsPack: null,
+    blurb: 'Recita el encantamiento de cada poción al usarla.',
+    rules: ['Cada vez que usas una poción se muestra su encantamiento. Es solo ambientación.'] },
+  { id: 'momentosPaz', group: 'narrativa', name: 'Momentos de Paz y Descanso', needsPack: 'anemia', needsModules: ['troll'],
+    blurb: 'Qué hacen David Galahad y Gral cuando acampas.',
+    rules: ['Cuando llegas a un Campamento con David Galahad o con Gral contratados, tiras un d6 para saber en qué se entretiene (solo ambientación).'] },
+  { id: 'metalInmortal', group: 'aventura', name: 'Aventura: Metal Inmortal', needsPack: 'anemia', forcesHero: 'anc1',
+    blurb: 'Gene Slash persigue al Señor del Tiempo por una mazmorra reducida.',
+    rules: ['Héroe obligatorio: Gene Slash (Guitarra Hacha, Chaqueta con Tachuelas y Lírica Bestial).',
+      'Mazo de enemigos de 18 cartas al azar y 12 tramas: 4 de 1 ojo, 6 de 2 ojos y 2 de 3 ojos.',
+      'Jefe final: el Señor del Tiempo; tras cada ataque tiras 2d6 y con dobles lo aturdes y te devuelve a 1987 (victoria); si le matas quedas atrapado en esta época (también victoria).'] },
+];

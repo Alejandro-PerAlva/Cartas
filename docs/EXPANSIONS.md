@@ -3,7 +3,7 @@
 Las 15 expansiones del registro oficial están integradas: 7 campañas (Warren of Despair, Blackened Burrow,
 Galnok's Labyrinth, Crystal Caverns, Throne of Embers, Malicia's Refuge, The Spire of Zogar) y 8 módulos (Loot & Lore,
 Realms & Relics, The Lonely Troll Inn, The Fanny Pack, Beasts & Burdens, The Howling Abyss, Iron Chest, Gnome Pack #1).
-Son datos más una tabla de comportamiento; solo las mecánicas totalmente nuevas tocan el motor.
+A ellas se suma un **modo fanmade**, ANEMIA 4.0 (sección 6), con sus reglas variantes. Son datos más una tabla de comportamiento; solo las mecánicas totalmente nuevas tocan el motor.
 
 ## 1. Imágenes
 Las cartas (480×675 JPG) van en `iron_helm_game/assets/cards/expansions/<id>/card_000.jpg … card_NNN.jpg`.
@@ -26,6 +26,7 @@ Un array con un objeto por carta y **el texto literal** impreso. `kind`:
 | `race` · `class` · `sign` | `gnome.{races,classes,signs}` | creador de personajes |
 | `rules` | `rules[]` | la de Encuentros Aleatorios guarda su `table` en `meta.encounterTable` |
 | `campaign` | `meta.intro`, `meta.campaign{level,removes,boss}` | `removes` por NOMBRE; si falta se lee del texto ("Enemigos: …") |
+| `rules` con `group` | `rules[]` | textos de las variantes de ANEMIA (`group`: `origin`, `epilogue`, `enchantment`…; `table`; sin imagen) |
 | `map` · `divider` · `tracker` · `other` | `meta.map` · `meta.backs` · — | separadores útiles como dorso: `environments, artifacts, mercenaries, afflictions, dungeon` |
 
 `npm run gen:data` regenera `js/data/packs/<id>.gen.js` (copias idénticas fusionadas con `copies` e `imgs`).
@@ -39,7 +40,7 @@ Un array con un objeto por carta y **el texto literal** impreso. `kind`:
 - `cat.byCode.get(clave)` devuelve la carta (primero las activas, luego cualquier expansión).
 
 ## 3. Comportamiento (`js/data/pack-fx.js`)
-- `PACKS`: `id, name, es, type ('campaign'|'module'), number, blurb, rules[]` y, en campañas, `remove{enemies,plots}`
+- `PACKS`: `id, name, es, type ('campaign'|'module'|'mode'), number, blurb, rules[]` y, en campañas, `remove{enemies,plots}`
   (códigos del juego base, comprobados contra los nombres de la carta de campaña por un test), `boss` (clave),
   `adventureLevel` (el "NIVEL n" impreso), `includes` (Zogar → `beasts`); `exclusive:'dungeonDeck'` (Howling).
 - `POWERS[clave]`, `FX[clave]`, `PLOT_OPS[clave]` (con `pre`, `options[i]`, `req[i]`), `ENV_FX[clave]`,
@@ -180,3 +181,128 @@ Las cartas de las cinco primeras expansiones están cubiertas por `tests/expansi
 | gnome | `C18` | Grubrot | Héroe (Bastón del Cuervo, Vestiduras, Alquimia) | héroe | modules: «C18 Grubrot: Bastón del Cuervo (de otra expansión, inyect…» |
 | gnome | — | Gnome: razas | Humano, Kroling, Enano, Elfo del Bosque, Gnomo, Mediano, Semiorco, Tritón | motor | modules: «Raza …» (8 tests) |
 | gnome | — | Clases (8) y Signos Astrales (12) | Bonos, raciones, oro, habilidad inicial; competencia, moral y equipo inicial | catalog (evalCustomHero) | modules: «Gnome: creador de personajes…», «Gnome: validación…», «Gnome: el equipo…» |
+
+## 6. ANEMIA 4.0 (modo fanmade)
+
+Expansión fanmade de Matthew Biddle (tradumaquetación Aizen Myo 4U, 2023): `type: 'mode'` en `PACKS` (se activa en `config.modules` pero la
+interfaz la muestra en «Modos fanmade»). Datos en `data-src/anemia.json` → `js/data/packs/anemia.gen.js`; comportamiento en
+`pack-fx.js` (`POWERS`, `FX`, `PLOT_OPS`, `ENV_FX`, `VARIANTS`, `FEMALE_HEROES`, `HARD_ITEMS`) y en `js/engine/anemia.js` (cartas) y
+`js/engine/variants.js` (reglas variantes); el resto son ganchos en `combat.js`, `scenes.js`, `items.js`, `expansions.js` y `game.js`.
+
+**Contenido transcrito** (imágenes `assets/cards/expansions/anemia/`, 144 archivos de los que 72 son cartas reales y el resto separadores repetidos):
+5 héroes · 8 jefes (La Parca y el Señor del Tiempo fuera del mazo) · 12 enemigos (3 son peligros del mazo de enemigos: `trap:true`) ·
+5 de equipo · 4 pociones · 7 habilidades · 3 aflicciones · 4 entornos · 2 esbirros · 22 tramas (21 + el minijefe Unicornio Bicéfalo). Además
+44 entradas `kind:'rules'` con `group` (intro, tablas de Pueblo/Motivación/Momentos/Entornos temáticos, 21 epílogos, 10 encantamientos, 5 lugares
+de retiro, Metal Inmortal y los dos desafíos): son el texto de las variantes y el motor las lee de `GENERATED.anemia.rules`.
+
+Campos nuevos de la transcripción (los copia `gen-data.mjs`): `only:'metalInmortal'` (carta que no entra en ningún mazo: Guitarra Hacha, Chaqueta con
+Tachuelas, Lírica Bestial, Señor del Tiempo; el Señor del Tiempo entra en el mazo de jefes con esa variante), `special:'parca'` (jefe fuera del mazo),
+`stats` (estadísticas de un esbirro como enemigo: Gral), `weakness2` → `weaknesses[]` (Samurái de las Sombras: fuego y hielo), `encumbrance:'*'`
+(La Bestia), `health/damage/treasure:'*'` (Mutante), `kind:'rules'` con `group`/`table`/`counts` y sin imagen.
+
+### Cobertura carta a carta
+| Clave | Carta | Efecto | Dónde | Test |
+|---|---|---|---|---|
+| `ANC1` | Gene Slash | 10/8/8/0/0, Guitarra Hacha + Chaqueta con Tachuelas, Lírica Bestial | héroe + FX | anemia: «ANC1 Gene Slash…» |
+| `ANC2` | La Bestia | 14/14, carga "*" (solo armas), se come al enemigo derrotado (+2 de energía) | héroe + motor (`carryRule`, `eatEnemy`) | anemia: «ANC2 La Bestia…» (3) |
+| `ANC3` | Mae | 10/10/9/1/4, Espada de Appleton, Estrategia; femenina | héroe + `FEMALE_HEROES` | anemia: «ANC3 Mae…» |
+| `ANC4` | Samurái | 12/12/10/1/1, Espada Samurái, Doble Fase | héroe | anemia: «ANC4 Samurái…» |
+| `ANC5` | Thorn | 7/10/11/1/2, Bastón del Cuervo, Vestiduras, Sangre Envenenada | héroe | anemia: «ANC5 Thorn…» |
+| `ANB1` | La Parca | 24/4/0 no muerto; con dobles relanza ambos dados | POWERS `rerollDoubles` | anemia: «ANB1 La Parca…» |
+| `ANB2` | Malnok | 20/3/2; con dobles te impacta por un dado +1 | POWERS `doublesHitDie`+`doublesHitPlus` | anemia: «ANB2 Malnok…» |
+| `ANB3` | Tzxefytd | Sin salud: energía d6+10 (par), −2 por ataque; no se le puede dañar | POWERS `energyDuel`+`noDamage` + motor | anemia: «ANB3 Tzxefytd…» (2) |
+| `ANB4` | El Rey de los Muertos | 24/2/2; lo que suma contra no muertos, la mitad | POWERS `halveUndeadBonus` | anemia: «ANB4 El Rey de los Muertos…» |
+| `ANB5` | El Reptiliano | 21/3/1; un ataque con arma de menos de 2 destruye el arma | POWERS `loseWeaponUnder` | anemia: «ANB5 El Reptiliano…» |
+| `ANB6` | Gigante de los Hielos | 22/5/2; contra manos desnudas dobla su tirada | POWERS `doubleVsBare` | anemia: «ANB6 Gigante de los Hielos…» |
+| `ANB7` | Samurái de las Sombras | 17/3/2, fuego e hielo; solo impactas con 5-6 | POWERS `dodge`+`weaknesses` | anemia: «ANB7…» (2) |
+| `ANB8` | El Señor del Tiempo | 20/3/2; tras cada ataque 2d6, con dobles lo aturdes (victoria) | POWERS `timeLord` + variante | anemia: «ANB8 El Señor del Tiempo…» (2) |
+| `ANE1` | Mutante | Atributos del 1.º enemigo robado; habilidad y recompensa del 2.º | POWERS `mutant` + motor | anemia: «ANE1 Mutante…» (2) |
+| `ANE2` | Asesino Sigiloso | 3/1/0; a 0 de salud se filtra y se baraja en el mazo | POWERS `escapeOnZero` | anemia: «ANE2…» |
+| `ANE3` | Rata Gigante | 6/1/0 fuego, sin habilidad | — | anemia: «ANE3 Rata Gigante…» |
+| `ANE4` | Ogro | 6/1/1 fuego, 1 de oro; tras evitar daño +1 al siguiente ataque | POWERS `avoidGrows` | anemia: «ANE4 Ogro…» |
+| `ANE5` | Hombre Lobo | 7/3/1 fuego; la Daga de la Luna o la Moneda del Destino lo matan | POWERS `silverKill`+`coinKill` | anemia: «ANE5 Hombre Lobo…» |
+| `ANE6` | Perro No Muerto | 4/0/0; tus tiradas de ataque restan −2 | POWERS `attackPenalty` | anemia: «ANE6 Perro No Muerto…» |
+| `ANE7` | Nube Gaseosa | Peligro: se evita con Emboscada 1.ª; si no, d6−d6 de veneno | POWERS `hazard:'gas'` | anemia: «ANE7 Nube Gaseosa…» |
+| `ANE8` | Arenas Movedizas | Peligro: d6 hasta 5-6 (−1 de energía por fallo; sin energía mueres) | POWERS `hazard:'sand'` | anemia: «ANE8 Arenas Movedizas…» |
+| `ANE9` | Poza de Ácido | Peligro: pierdes lo que no sea de metal, cristal o piedra | POWERS `hazard:'acid'` + `HARD_ITEMS` | anemia: «ANE9 Poza de Ácido…» |
+| `ANE10` | Hombre Cerdo | 3/1/1 fuego; si no es Emboscada te roba 1 ración en vez del ataque inicial | POWERS `stealRation` | anemia: «ANE10 Hombre Cerdo…» |
+| `ANE11` | Centauro | 7/2/1 fuego, 2 de oro; con una heroína no ataca primero; evitable | POWERS `femaleNoInitial`+`freeAvoid` | anemia: «ANE11 Centauro…» |
+| `ANE12` | Masa Ósea | 3/1/1 no muerto; si impacta se adhiere y te daña 1 al atacar | POWERS `sticky` | anemia: «ANE12 Masa Ósea…» |
+| `ANT1` `ANT2` | Guitarra Hacha · Chaqueta con Tachuelas | +1 a los ataques · −1 al daño inicial | FX | anemia: «ANC1 Gene Slash…» |
+| `ANT3` | La Bomba de Dios | Mueres y te llevas al enemigo | motor (`_anemiaUse`) | anemia: «ANT3 La Bomba de Dios…» |
+| `ANT4` `ANT5` | Espada de Appleton · Espada Samurái | +1 a la suma · deja a 1 de salud = muere | FX | anemia: «ANT4/ANT5 Espadas…» |
+| `ANP1` | Sangre de Lobo | +3 salud y energía (supera el máximo) hasta el fin del combate; moral −1 | motor | anemia: «ANP1 Sangre de Lobo…» |
+| `ANP2` `ANP3` | Energía Potencial · Absorción | Combates sin atacar: +2 de energía / +2 al siguiente ataque por cada reposo | motor (`restMode`, special `rest`) | anemia: «ANP2…», «ANP3…» |
+| `ANP4` | Silencio | Anula la habilidad del enemigo (no jefes) | motor | anemia: «ANP4 Silencio…» |
+| `ANAF1` | Amnesia | Una habilidad aleatoria olvidada cada nivel | motor (`s.lvl.forgotten`) | anemia: «ANAF1…» (2) |
+| `ANAF2` | Fiebre del Oro | Tesoro 1 = siempre la moneda | motor | anemia: «ANAF2 Fiebre del Oro…» |
+| `ANAF3` | Adrenalina | 3 aventuras seguidas (la actual cuenta) sin Posada | motor (`s.chain`) | anemia: «ANAF3 Adrenalina…» |
+| `ANS1` | Sangre Envenenada | Inmune al veneno; +7 de salud adicionales | FX `poisonImmune`, `maxHpBonus`, `hpOnLearn` | anemia: «ANS1…» |
+| `ANS2` | Pacificador | En vez de atacar d6: 5-6 fin amistoso sin XP ni botín; 1-4 ataca | motor (special) | anemia: «ANS2 Pacificador…» |
+| `ANS3` | Artes Oscuras | Moral −1, +1 poción, sin bendiciones | FX `moralityOnLearn`, `potionOnLearn`, `noBlessings` | anemia: «ANS3 Artes Oscuras…» |
+| `ANS4` | Más Rápido que la Vista | Ignora una trama con ojos por nivel | motor (`_offerIgnorePlot`) | anemia: «ANS4…» |
+| `ANS5` | Doble Fase | 1 de energía: d6 1-2 +1 daño · 3-4 fallas · 5-6 evitas (sin 2M) | motor (reacción `fase`) | anemia: «ANS5 Doble Fase…» |
+| `ANS6` | Puños de Fuerza | 1 de energía: 3 de daño automático si derrotan (1/nivel) | motor (special `punos`) | anemia: «ANS6…» |
+| `ANS7` | Lírica Bestial | Evita un no muerto (1/nivel) | motor (`avoidEnemy` `lirica`) | anemia: «ANS7…» |
+| `ANEN1` | La Niebla | Combate antes de Campamento/Altar/Setas; sin cocinar; sin sumar el nivel | ENV_FX `fightBefore`, `noCook`, `noLevelBonus` | anemia: «ANEN1 La Niebla…» |
+| `ANEN2` | El Reino Arborícola | Fuego +2; sin Bellota; el Claro se cambia; +2 bendiciones ante jefe/minijefe | ENV_FX | anemia: «ANEN2…» |
+| `ANEN3` | Cielo Resquebrajado | 1 energía/salud por ronda; terminar el nivel en el Campamento; −1 al daño | ENV_FX `roundDrain`, `campEndLevel`, `dmgAll:-1` | anemia: «ANEN3…» (2) |
+| `ANEN4` | La Ciudad Caída | Emboscada = Escaramuza; combate inicial con iniciativa; sin Buscar; 1 ración evita al jefe | ENV_FX | anemia: «ANEN4…» |
+| `ANM1` | David Galahad | 1 de daño con su honda antes del daño inicial; moral −1 con 6+ de daño | FX `sling` + `_mercHurt` | anemia: «ANM1 David Galahad…» |
+| `ANM2` | Gral, el Pirata | Combate en tu lugar; roba el oro con 11+ en el Campamento; moral −1 al gastar oro | motor (`_gralCamp`, special `gral`) | anemia: «ANM2…» (3) |
+| `ANPT1`-`ANPT22` | Tramas | Ver la fila de cada una en `PLOT_OPS` (`js/data/pack-fx.js`); operaciones nuevas en `anemia.js · _opAnemia` | PLOT_OPS + motor | anemia: «ANPT1 La Criatura…» … «ANPT22 Necronomicón…» (una por trama) |
+
+### Reglas variantes (reglamento 4.0)
+`config.variants = { id: true }`; `listVariants()` da nombre, resumen y viñetas para el menú (`js/data/pack-fx.js · VARIANTS`).
+| id | Libro | Comportamiento fiel a lo escrito | Test |
+|---|---|---|---|
+| `diablillo` | p. 4 | Peón sobre Botín al empezar; avanza Botín → Pociones → fuera al robar cada par; −1 carta de botín/poción si está sobre ese mazo | variants: «Diablillo…» (2) |
+| `pueblo` | p. 4 | d6 al empezar: Thrawdin +1 salud · Victorsville +1 energía · Stubben +1 carga · Vandale +1 ración · Appleton +1 oro · Mucktown +1 bendición | «Pueblo de Origen…» |
+| `motivacion` | p. 5 | d6 con el motivo (solo narrativa) | «Motivación…» |
+| `ceroEnergia` | p. 5 | El puñetazo tira d6: 1 falla −1 salud · 2-3 impacta −1 salud · 4 falla · 5-6 impacta | «Cero Energía…» |
+| `gastarXP` | p. 5 | 7 enemigos derrotados → +1 salud o energía máximas | «Gastar Puntos de Experiencia…» |
+| `hogarSonado` | p. 7 | 30 de oro; el combate contra el jefe es opcional si los tienes cuando aparece | «Hogar Soñado…» |
+| `sinRetorno` | p. 7 | Aventuras de nivel 1, 2 y 3 seguidas sin Posada; +25 monedas para el recuento | «Sin Retorno…» (4) |
+| `justoAntesDeMorir` | p. 8 | Una vez por partida pierdes el uso de OM en vez de morir | «Justo Antes de Morir…» (2) |
+| `enfrentarseParca` | p. 8 | Al morir, duelo contra La Parca con solo las armas de las manos; si ganas regresas | «Enfrentarse a La Parca…» (5) |
+| `entornosTematicos` | p. 13 | d4 de rumbo; entorno de niveles 1-3 según la tabla | «Entornos Temáticos…» (2) |
+| `muertesAtroces` | p. 14-21 | Epílogo de 16 jefes y 5 minijefes | «Muertes Atroces…» (2) |
+| `encantamientos` | p. 22-23 | Texto de cada poción al usarla | «Encantamientos…» |
+| `metalInmortal` | p. 24-25 | Gene Slash, 18 enemigos, 12 tramas (4/6/2 por ojos), Señor del Tiempo | «Metal Inmortal…» (2) |
+| `lugaresRetiro` | p. 26-27 | Texto del lugar de retiro según la puntuación | «Lugares de Retiro…» |
+| `momentosPaz` | p. 11 | d6 de entretenimiento de David/Gral en el Campamento | «Momentos de Paz y Descanso…» |
+
+**No implementadas** (por no encajar en un motor de un solo héroe): *Variante de 2 Jugadores* (p. 6) y *Añadir Elementos Fanmade* (es el propio modo).
+
+### Ambigüedades e interpretaciones (ANEMIA)
+Las cartas no imprimen código (`ANxx` son claves propias) y el libro es breve; estas son las decisiones donde el texto no cierra la regla:
+- **Energía máxima**: se toma el tope de 14 fichas del motor (`+1` por cada «Gastar XP»). Lo usan «toda tu energía» (Santo Grial, La Parca) y el
+  «aunque se exceda la cantidad máxima» de Sangre de Lobo y Necronomicón (que puede superar 14 de forma permanente).
+- **Jefes finales de ANEMIA**: entran en el sorteo por debilidad (azar entre los candidatos con esa debilidad); un jefe con dos debilidades (Samurái de
+  las Sombras) cuenta en ambas y **Tzxefytd** (átomo gris, sin debilidad) es candidato siempre. Con campaña, el jefe fijo manda.
+- **Tzxefytd**: su «energía» se muestra como salud del combate (`c.hp/maxHp`); gasta 2 en cada ataque (también si falla por dobles) y cae al agotarla tras resolver su
+  último ataque. Atacar no gasta nada (el turno es «resistir»); las pociones de curación se pueden usar.
+- **Guitarra Hacha**: «¡si te gusta el Heavy Metal!» se toma como +1 siempre. **La Bomba de Dios**: mata al héroe (con La Parca puede revivir) y al enemigo; contra el jefe final, derrota en
+  lugar de victoria (salvo que La Parca te devuelva).
+- **Gral**: «combatirá en tu lugar» = una vez por combate, en vez de tu ataque, 1d6 sin gastar energía (sin bonificaciones). En el robo del Campamento no se suma el nivel a su salud (8); si te mataría o si lo derrotas, se marcha (derrotado, deja su tesoro 1).
+- **David Galahad**: la honda actúa antes del daño inicial incluso si tienes la iniciativa. «6 o más de daño» se evalúa por golpe.
+- **Poza de Ácido**: lo «de metal, cristal o piedra» es un criterio por arte/nombre (`HARD_ITEMS` en `pack-fx.js`: armas y armaduras metálicas, pociones, esmeralda, mortero…).
+- **Centauro**: «si tu personaje es femenino» se decide por el arte de cada héroe (`FEMALE_HEROES`); el Gnome Pack no define género (nunca lo es).
+- **Perro No Muerto**: −2 al total de cada tirada de ataque con dados (mínimo 0), no por dado. **Ogro**: el +1 no se acumula.
+- **Hombre Cerdo / Arenas / Nube / Poza**: «Emboscada robada como primera carta» = parte 1 de una Emboscada (no si se resuelve como 2.ª ni como Escaramuza).
+- **Mutante**: atributos = salud, daño y debilidad del primero; habilidad, tipo de tesoro y bolsa del segundo; los peligros y otros Mutantes que salgan se descartan. Al derrotarlo cuenta con la debilidad del primero para el jefe.
+- **Sangre de Lobo** termina al acabar el combate en curso (si la bebes en combate) o el siguiente; **Energía Potencial / Absorción**: «no atacar» es la acción especial `rest`.
+- **Pacificador / Silencio**: no valen contra el jefe final. **Puños de Fuerza**: cuando la salud del enemigo es ≤ 3.
+- **Entornos**: La Niebla quita el nivel a toda salud/daño de enemigos; Cielo Resquebrajado cobra en cada turno de ataque del héroe; evitar al jefe en La Ciudad Caída termina la partida con victoria (`ending: 'evaded'`).
+- **Tramas**: *La Criatura* se resuelve con **dos** enemigos seguidos (el texto dice «a él dos veces» pero habla de «ambos»); lo de atacar primero no se aplica (no hay ningún objeto que lo permita en una trama). *El Hombre de Latón*: 3.ª tirada cuesta `r1 − r3` (el texto
+  dice «igualar el primer resultado»), puedes abandonar entre tiradas y si no tienes energía suficiente se abandona. *Los Tres Túneles*: izquierda 3d6 sin 6; centro d6 3-5; derecha 2d6 descartando el mayor, resultado 1-2 (cada icono de
+  dado del libro). *Alora*: el bebé ocupa 3 de carga el resto de la partida. *Cambio de Cuerpo*: eliges personaje; la salud/energía/carga que excedan los del nuevo se recortan (la salud máxima pasa a ser la suya). *Doya*: eliges cualquier habilidad del mazo.
+  *Arena de Combate*: «su botín» incluye la bolsa de oro; ambos cuentan como derrotados. *Aquelarre*: el veneno se paga al empezar cada combate (aunque lo evites) hasta que mates a puñetazos. *El Portal*: relanza 6 o tu nivel; también vale a mitad de nivel. *La Horda*: sin energía solo puedes «no tirar» (daño
+  = tamaño). *La Pitonisa*: la ficha pasa al final de tu próximo combate (cualquier resultado). *El Trato*: las fichas «de veneno» son las de curar el veneno y valen 1 cada una. *El Libro Prohibido*: eliges tú la habilidad perdida. *Necronomicón*: la energía extra no se pierde.
+- **Adrenalina**: la aventura en curso cuenta como la primera de las 3; curarla cancela el encadenado.
+- **Justo Antes de Morir**: se ofrece también si el ataque te deja exactamente a 0 (el texto dice «más puntos de los que te quedan»); el golpe aún causa sus efectos secundarios (veneno…). **Enfrentarse a La Parca**: se pierden también los objetos de la mochila, las habilidades se
+  suspenden durante el duelo, los esbirros no te acompañan, el veneno se elimina, al volver conservas la salud que te quede y tu combate interrumpido continúa; la Parca no cuenta como enemigo derrotado.
+- **Hogar Soñado**: solo se puede comprar al aparecer el jefe (no antes); el rango final es al menos «Mansión». **Sin Retorno**: la aventura de nivel 1 es el juego base; la campaña elegida ocupa su hueco (nivel 2 o 3) y el otro se sortea con la semilla; los enemigos derrotados
+  se conservan entre aventuras; los «25 monedas de oro adicionales» se cuentan a 3 puntos cada una (+75).
+- **Entornos Temáticos**: el libro solo define los niveles 1-3; en 4 y 5 se roba un entorno al azar; el Oeste de nivel 2 (Reino Arborícola o Cielo) se sortea con un d6 (1-3 / 4-6). Exige `realms`.
+- **Metal Inmortal**: Gene Slash es obligatorio; las «18 enemigos al azar» pueden agotarse (entonces no hay combate); matar al Señor del Tiempo y mandarlo a 1987 son victorias distintas (`ending`).

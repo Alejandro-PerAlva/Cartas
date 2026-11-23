@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Iron Helm</string>
+    <string name="back_again">Pulsa otra vez para salir</string>
+    <string name="dialog_ok">Aceptar</string>
+    <string name="dialog_cancel">Cancelar</string>
+    <string name="load_error">No se pudo cargar el juego.</string>
+</resources>

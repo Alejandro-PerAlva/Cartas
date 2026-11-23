@@ -6,6 +6,9 @@ import { play, audit, mulberry } from './helpers/bot.js';
 const OLD = ['loot_lore', 'fanny_pack', 'beasts'];
 const NEW = ['realms', 'troll', 'iron_chest', 'gnome'];
 const ALL_MODULES = [...OLD, ...NEW]; // The Howling Abyss es exclusivo (mazo de mazmorra): se prueba aparte y con todo
+/** ANEMIA 4.0: todas las variantes que se pueden combinar a la vez (Hogar Soñado, Sin Retorno y Metal Inmortal se prueban aparte) */
+const VARIANTS_MIX = { diablillo: true, pueblo: true, motivacion: true, ceroEnergia: true, gastarXP: true, justoAntesDeMorir: true, enfrentarseParca: true,
+  entornosTematicos: true, muertesAtroces: true, lugaresRetiro: true, encantamientos: true, momentosPaz: true };
 const CONFIGS = [
   { name: 'base', config: {} },
   { name: 'warren', config: { campaign: 'warren' } },
@@ -33,6 +36,16 @@ const CONFIGS = [
   { name: 'spire+todos', config: { campaign: 'spire', modules: [...ALL_MODULES, 'howling'] }, custom: true },
   { name: 'malicia+todos', config: { campaign: 'malicia', modules: [...ALL_MODULES, 'howling'] }, custom: true },
   { name: 'galnok+todos', config: { campaign: 'galnok', modules: ALL_MODULES } },
+  // ANEMIA 4.0 (modo fanmade) y sus reglas variantes
+  { name: 'anemia', config: { modules: ['anemia'] } },
+  { name: 'anemia+módulos', config: { modules: ['anemia', ...ALL_MODULES] }, custom: true },
+  { name: 'anemia+todas las variantes', config: { modules: ['anemia', 'realms', 'troll', 'beasts', 'fanny_pack', 'loot_lore'], variants: VARIANTS_MIX } },
+  { name: 'anemia+hogar soñado', config: { modules: ['anemia', 'realms', 'troll'], variants: { ...VARIANTS_MIX, hogarSonado: true } } },
+  { name: 'anemia+sin retorno', config: { modules: ['anemia', 'realms', 'troll'], variants: { ...VARIANTS_MIX, sinRetorno: true } } },
+  { name: 'anemia+sin retorno+campaña', config: { campaign: 'crystal', modules: ['anemia', 'beasts'], variants: { sinRetorno: true, diablillo: true } } },
+  { name: 'anemia+metal inmortal', config: { modules: ['anemia', 'realms', 'troll'], variants: { ...VARIANTS_MIX, metalInmortal: true } }, hero: 'anc1' },
+  { name: 'spire+anemia+todos', config: { campaign: 'spire', modules: ['anemia', ...ALL_MODULES, 'howling'], variants: { ...VARIANTS_MIX, ceroEnergia: false } }, custom: true },
+  { name: 'base+variantes sin ANEMIA', config: { variants: { diablillo: true, pueblo: true, ceroEnergia: true, gastarXP: true, justoAntesDeMorir: true, hogarSonado: true, encantamientos: true } } },
 ];
 
 /** personaje aleatorio del Gnome Pack (raza, clase, signo, habilidad y equipo válidos) */
@@ -45,11 +58,11 @@ function randomCustom(seed) {
   if (race.name === 'Gnomo' && r() < 0.5) sel.potion = 'Antídoto';
   return sel;
 }
-function newGame({ config, custom }, seed, godMode) {
+function newGame({ config, custom, hero: forced }, seed, godMode) {
   const cat = buildCatalog(config);
   const heroes = cat.pools.heroes;
   if (custom && seed % 3 === 0) return Game.create({ heroId: 'custom', config: { ...config, custom: randomCustom(seed) }, seed, godMode });
-  const hero = heroes[seed % heroes.length];
+  const hero = forced ? heroes.find((h) => h.id === forced) : heroes[seed % heroes.length];
   return Game.create({ heroId: hero.id, config, seed, godMode });
 }
 

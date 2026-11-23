@@ -96,6 +96,14 @@ export class DiceTray {
       requestAnimationFrame(step);
     });
   }
+  /** da la vuelta a un dado (Piedra de Afilar, Borko): se levanta, gira y queda con la cara opuesta */
+  async flip(i, value) {
+    const d = this.dice[i]; if (!d) return;
+    const t = (rot, y = 0, sc = 1) => `translate(${d.pos.x}px, ${d.pos.y + y}px) scale(${sc}) ${rot}`;
+    d.v = value; sound.diceRoll(1);
+    const a = d.el.animate([{ transform: d.el.style.transform }, { transform: t(rotTf(value, [360, 0, 0]).replace(/rotateX\((-?\d+)deg\)/, (m, x) => `rotateX(${+x - 180}deg)`), -46, 1.3), offset: 0.5 }, { transform: t(rotTf(value)) }], { duration: 650 * speed.k, easing: 'ease-in-out', fill: 'forwards' });
+    await a.finished.catch(() => {}); d.el.style.transform = t(rotTf(value)); a.cancel(); sound.diceLand();
+  }
   /** etiqueta numérica sobre el dado */
   label(text, i = null) {
     const d = i == null ? null : this.dice[i];

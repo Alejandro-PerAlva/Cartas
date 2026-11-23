@@ -4,6 +4,14 @@
 import { Game } from './game.js';
 
 const inRow = (row, v) => (Array.isArray(row) ? row.includes(v) : row === v);
+/** claves de carta con uso activo (`useItem`) y cuándo se pueden usar */
+export const USE_KEYS = {
+  L1: 'free', L5: 'free', P1: 'free', P2: 'free', P6: 'free', L20: 'free', T2: 'free', T23: 'free', L25: 'free', AT9: 'free',
+  T19: 'free', L46: 'free', T26: 'free', T29: 'free', L26: 'free', L32: 'free', T3: 'pair', L16: 'pair',
+  // ANEMIA 4.0: Sangre de Lobo se bebe cuando quieras; las demás pociones y La Bomba de Dios solo durante un combate ('combat')
+  ANP1: 'free', ANP2: 'combat', ANP3: 'combat', ANP4: 'combat', ANT3: 'combat',
+};
+const USE_PROMPTS = ['turn', 'setup', 'attack', 'pre', 'avoidCard'];
 
 Object.assign(Game.prototype, {
   /* ============================================================================ uso de objetos */
@@ -80,9 +88,27 @@ Object.assign(Game.prototype, {
         this.log(`Sello de Zogar: el descarte de mazmorra contiene ${uids.length ? uids.map((u) => this.def(u).name).join(', ') : 'nada'}.`, 'item');
         break;
       }
-      default: this.fail(`${d.name} no se usa de esta forma.`);
+      default: if (!this._anemiaUse?.(d, uid, pr)) this.fail(`${d.name} no se usa de esta forma.`);
     }
     if (!this.s.over) this.checkDeath();
+  },
+
+  /**
+   * ¿Tiene este objeto un uso activo AHORA? Lo consulta la interfaz para ofrecer «USAR».
+   * Devuelve `null` o `{ when: 'free' | 'pair' }` (`pair` = solo justo después de robar las dos cartas).
+   * Las expansiones añaden sus claves en `USE_KEYS` (arriba del fichero) o con `fx.use` en la carta.
+   */
+  usableNow(uid) {
+    if (!this.s.prompt || !this.allItems().includes(uid)) return null;
+    const d = this.def(uid); const pr = this.s.prompt.type;
+    const when = USE_KEYS[d.key] || (d.fx?.use ? 'free' : null);
+    if (!when) return null;
+    if (when === 'pair') return pr === 'pair' && !(d.key === 'L16' && this.s.lvl.lamp) ? { when } : null;
+    if (when === 'combat') return this.s.combat && ['attack', 'pre'].includes(pr) && !(d.key === 'ANP4' && this.s.combat.boss) ? { when } : null;
+    if (!USE_PROMPTS.includes(pr)) return null;
+    if (d.key === 'T26' && this.s.cards[uid].empty) return null;
+    if (d.key === 'L32' && this.s.lvl.seal) return null;
+    return { when };
   },
 
   /** Aflicciones (Bestias y Trabas): una poción de salud cura una; un antídoto las cura todas. */
@@ -90,11 +116,11 @@ Object.assign(Game.prototype, {
     const list = this.hero.afflictions;
     if (!list.length) return;
     if (all || list.length === 1) {
-      for (const u of list.splice(0)) { this.s.z.afflictionsDiscard.push(u); this.emit('cureAffliction', { uid: u }); }
+      for (const u of list.splice(0)) { this.s.z.afflictionsDiscard.push(u); this.emit('cureAffliction', { uid: u }); this._afflictionCured?.(u); }
       this.log('Te curas de tus aflicciones.', 'affliction');
       return;
     }
-    this.insert(function pickAf() { this.ask('pickCards', { title: 'Elige la aflicción que quieres curar', uids: list.slice(), min: 1, max: 1, purpose: 'cureAffliction' }); });
+    this.insert(function pickAf() { if (list.length) this.ask('pickCards', { title: 'Elige la aflicción que quieres curar', uids: list.slice(), min: 1, max: 1, purpose: 'cureAffliction' }); }); // (un antídoto pudo curarlas antes)
   },
 
   /** cartas que se resuelven en cuanto se roban (ya están en su pila de descarte) */
@@ -111,6 +137,7 @@ Object.assign(Game.prototype, {
 
   /* ============================================================================ robar botín / pociones / artefactos */
   gainLoot(n = 1) {
+    n = this._impCut ? this._impCut('loot', n) : n; // El Diablillo
     const tasks = [];
     for (let i = 0; i < n; i++) tasks.push(function lootOne() { this._lootOne(); });
     this.insert(...tasks);
@@ -164,6 +191,7 @@ Object.assign(Game.prototype, {
   acquireLoot(uid) { this.log(`Robas botín: ${this.def(uid).name}.`, 'inv'); this.acquire(uid); },
 
   gainPotion(n = 1) {
+    n = this._impCut ? this._impCut('potions', n) : n; // El Diablillo
     const tasks = [];
     for (let i = 0; i < n; i++) tasks.push(function potionOne() { this._potionOne(); });
     this.insert(...tasks);
@@ -222,7 +250,7 @@ Object.assign(Game.prototype, {
         this._endCombat('avoid'); break;
       }
       case 'cureAffliction': {
-        for (const u of chosen) { this.hero.afflictions.splice(this.hero.afflictions.indexOf(u), 1); z.afflictionsDiscard.push(u); this.emit('cureAffliction', { uid: u }); }
+        for (const u of chosen) { this.hero.afflictions.splice(this.hero.afflictions.indexOf(u), 1); z.afflictionsDiscard.push(u); this.emit('cureAffliction', { uid: u }); this._afflictionCured?.(u); }
         this.log('Te curas de una aflicción.', 'affliction'); break;
       }
       // --- expansiones ---
@@ -304,13 +332,15 @@ Object.assign(Game.prototype, {
         break;
       }
       case 'pickLoot': {
+        if (this._impCut?.('loot', 1) === 0) break;
         const uids = []; let guard = 0;
         while (uids.length < a && guard++ < 30) { const u = this.draw('loot'); if (!u) break; if (this.def(u).kind === 'enemy') { z.loot.push(u); continue; } uids.push(u); }
         if (uids.length) this.ask('pickCards', { title: `Roba ${a} cartas de botín y quédate con una`, uids, min: 1, max: 1, purpose: 'drawKeep' });
         break;
       }
-      case 'pickPotionFromDeck': this._pickFromDeck('potions', 1, 'Elige una poción del mazo'); break;
+      case 'pickPotionFromDeck': if (this._impCut?.('potions', 1) === 0) break; this._pickFromDeck('potions', 1, 'Elige una poción del mazo'); break;
       case 'lootSearch': { // La Estatua con Alas (4/5): coge la carta de botín que quieras y baraja
+        if (this._impCut?.('loot', 1) === 0) break;
         const cand = z.loot.filter((u) => this.def(u).kind === 'item');
         if (!cand.length) { this.log('El mazo de botín está vacío.', 'plot'); break; }
         this.ask('pickCards', { title: 'Elige la carta de botín que quieras', uids: cand, min: 1, max: 1, purpose: 'deckPick', deck: 'loot', reshuffle: true });
@@ -370,10 +400,10 @@ Object.assign(Game.prototype, {
       case 'curePoison': this.lose('poison', h.poison, src?.name); this.log('Te curas todo el veneno.', 'plot'); break;
       case 'fight': { // roba un enemigo y combate con los ajustes de la carta
         const o = a || {};
-        this._drawAndFight({ source: 'plot', ambush: o.ambush || 'normal', hpBonus: (o.hpBonus || 0) + (o.hpLevel ? lvl : 0), initialBonus: o.initialBonus || 0, onWin: o.onWin || null });
+        this._drawAndFight({ source: o.source || 'plot', ambush: o.ambush || 'normal', hpBonus: (o.hpBonus || 0) + (o.hpLevel ? this.eLvl() : 0), initialBonus: o.initialBonus || 0, onWin: o.onWin || null });
         break;
       }
-      case 'fightRandom': this.log('¡Aparece un enemigo!', 'plot'); this._drawAndFight({ source: 'plot', ambush: 'normal', hpBonus: lvl, initialBonus: 0 }); break;
+      case 'fightRandom': this.log('¡Aparece un enemigo!', 'plot'); this._drawAndFight({ source: 'plot', ambush: 'normal', hpBonus: this.eLvl(), initialBonus: 0 }); break;
       case 'randomSkill': { // El Viejo Libro
         const cand = z.skills.filter((u) => !h.skills.includes(this.s.cards[u].id));
         if (!cand.length) { this.log('No quedan habilidades por aprender.', 'plot'); break; }
@@ -431,7 +461,7 @@ Object.assign(Game.prototype, {
       case 'espejo': {
         const d = this.rollOne('espejo');
         this.log(`Atraviesas el espejo: ${d}.`, 'plot');
-        if (d <= 2) this._drawAndFight({ source: 'espejo', ambush: 'normal', hpBonus: this.s.level, initialBonus: 0 });
+        if (d <= 2) this._drawAndFight({ source: 'espejo', ambush: 'normal', hpBonus: this.eLvl(), initialBonus: 0 });
         else if (d <= 4) { h.carryBonus += 1; this.log('Te sientes más corpulento: tu valor máximo de carga aumenta en 1.', 'plot'); }
         else {
           const skip = (arr) => arr.splice(0, 4);
@@ -440,7 +470,7 @@ Object.assign(Game.prototype, {
         }
         break;
       }
-      default: throw new Error(`Operación de trama desconocida: ${name}`);
+      default: if (!this._opAnemia?.(op, src)) throw new Error(`Operación de trama desconocida: ${name}`);
     }
   },
   _gamble(won) {

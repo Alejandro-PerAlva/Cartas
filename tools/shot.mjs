@@ -18,6 +18,9 @@ export async function open({ width = 1600, height = 900, touch = false, scale = 
   const errors = [];
   page.on('pageerror', (e) => errors.push('PAGEERROR ' + e.message));
   page.on('console', (m) => { if (['error', 'warning'].includes(m.type())) errors.push(`${m.type().toUpperCase()} ${m.text()}`); });
+  // IH_INSETS="arriba,derecha,abajo,izquierda" (px CSS) simula muescas y barras del sistema, igual que hace la app Android
+  const ins = (process.env.IH_INSETS || '').split(',').map(Number);
+  if (ins.length === 4 && ins.every((n) => Number.isFinite(n))) await page.addInitScript((v) => { const set = () => { if (!document.documentElement) return; const st = document.documentElement.style; ['t', 'r', 'b', 'l'].forEach((k, i) => st.setProperty('--sai-' + k, v[i] + 'px')); }; set(); document.addEventListener('DOMContentLoaded', set); }, ins);
   await page.goto(url || 'file://' + path.join(ROOT, 'iron_helm_game', 'index.html'));
   await page.waitForTimeout(600);
   fs.mkdirSync(path.join(ROOT, 'shots'), { recursive: true });

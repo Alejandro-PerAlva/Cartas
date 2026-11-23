@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:colorBackground">@color/ih_bg</item>
+        <item name="android:colorBackgroundCacheHint">@color/ih_bg</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowContentTransitions">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowDisablePreview">false</item>
+        <item name="android:colorAccent">@color/ih_gold</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:enforceNavigationBarContrast">false</item>
+        <item name="android:enforceStatusBarContrast">false</item>
+        <!-- Pantalla de arranque del sistema (Android 12+): fondo del tapete en vez de blanco. -->
+        <item name="android:windowSplashScreenBackground">@color/ih_bg</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/ih_bg</item>
+    </style>
+</resources>

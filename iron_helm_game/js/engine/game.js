@@ -10,7 +10,7 @@
  * Los demás módulos (combat.js, scenes.js, items.js, expansions.js) extienden el prototipo de Game.
  */
 import { RNG } from './rng.js';
-import { buildCatalog, normName } from './catalog.js';
+import { buildCatalog, normName, planChain } from './catalog.js';
 
 export const SLOTS = ['MP', 'OM', 'CA', 'CP'];
 export const CAPS = { energy: 14, rations: 10, poison: 10 };
@@ -31,19 +31,25 @@ export class Game {
 
   /* ============================================================================ creación */
   static create({ heroId, config = {}, seed = (Date.now() & 0xffffffff) >>> 0, godMode = false }) {
-    const cat = buildCatalog(config);
+    // Desafío «Sin Retorno»: tres aventuras seguidas (niveles 1, 2 y 3); la primera fija la campaña inicial
+    const chain = config.variants?.sinRetorno ? planChain(config, seed) : null;
+    const cat = buildCatalog(chain ? { ...config, campaign: chain.adventures[0].campaign } : config);
     const rng = new RNG(seed);
-    const heroDef = cat.pools.heroes.find((h) => h.id === heroId);
+    // Sin Retorno: el héroe puede ser de la campaña elegida aunque la primera aventura sea el juego base
+    const heroDef = cat.pools.heroes.find((h) => h.id === heroId) || (chain ? buildCatalog(config).pools.heroes.find((h) => h.id === heroId) : null);
     if (!heroDef) throw new Error(heroId === 'custom' ? 'Para un personaje personalizado indica config.custom {race, klass, sign, skill, equipment}' : `Héroe desconocido: ${heroId}`);
+    if (cat.variants.metalInmortal && heroDef.key !== 'ANC1') throw new Error('La aventura Metal Inmortal exige jugar con Gene Slash.');
+    const carry = typeof heroDef.encumbrance === 'number' ? heroDef.encumbrance : 0; // La Bestia: carga "*" (solo armas)
     const s = {
       v: 3, seed, config: cat.cfg, heroId, godMode, nextUid: 1, cards: {},
       prompt: null, over: null, level: 1, turn: 0, eyes: 0, log: [], stats: { kills: 0, turns: 0 },
       adventureLevel: cat.adventureLevel, env: null, mercs: [], artifactsBought: 0, encounter: null,
       hero: {
-        name: heroDef.name, maxHp: heroDef.health, hp: heroDef.health, energy: heroDef.energy, rations: heroDef.rations,
-        gold: heroDef.gold, poison: 0, blessings: [], morality: heroDef.morality || 0, encumbrance: heroDef.encumbrance,
+        name: heroDef.name, key: heroDef.key, maxHp: heroDef.health, hp: heroDef.health, energy: heroDef.energy, rations: heroDef.rations,
+        gold: heroDef.gold, poison: 0, blessings: [], morality: heroDef.morality || 0, encumbrance: carry,
         proficiency: heroDef.proficiency, skills: [], skillCards: {}, afflictions: [], divinidad: 'energy', carryBonus: 0,
         scoreBonus: heroDef.finalScoreBonus || 0, race: heroDef.race || null, custom: heroDef.custom || null,
+        initial: { rations: heroDef.rations, gold: heroDef.gold, energy: heroDef.energy },
       },
       z: { dungeon: [], dungeonDiscard: [], pair: [null, null], enemies: [], enemiesDiscard: [], loot: [], lootDiscard: [],
         potions: [], potionsDiscard: [], plots: [], plotsPlayed: [], trappings: [], skills: [], afflictions: [], afflictionsDiscard: [],
@@ -54,35 +60,52 @@ export class Game {
       game: {},      // banderas de la partida (pozo bebido, etc.)
       ctx: {},       // contexto del turno en curso
       combat: null,
+      variants: { ...cat.variants },   // reglas variantes de ANEMIA 4.0 (id → true|false)
+      chain,                           // «Sin Retorno» / Adrenalina: aventuras encadenadas (o null)
     };
+    if (typeof heroDef.encumbrance !== 'number') s.hero.carryRule = 'weaponsOnly';
     const g = new Game(cat, s, rng);
     g._build(heroDef);
     return g;
   }
 
-  _build(heroDef) {
-    const { s, cat, rng } = this;
-    const mkAll = (defs) => {
-      const out = [];
-      for (const d of defs) {
-        const n = d.copies || 1;
-        for (let i = 0; i < n; i++) out.push(this.mk(d.id, (d.imgs && d.imgs[i % d.imgs.length]) || d.img));
+  /** Cartas físicas de un mazo: expande `copies` e imágenes alternativas. `skip` = multiconjunto de ids ya en poder del héroe. */
+  _expand(defs, skip = null) {
+    const out = [];
+    for (const d of defs) {
+      const n = d.copies || 1;
+      for (let i = 0; i < n; i++) {
+        if (skip?.get(d.id) > 0) { skip.set(d.id, skip.get(d.id) - 1); continue; }
+        out.push({ id: d.id, img: (d.imgs && d.imgs[i % d.imgs.length]) || d.img, def: d });
       }
-      return out;
-    };
+    }
+    return out;
+  }
+  /** Construye (o reconstruye, al encadenar aventuras) todos los mazos de la partida a partir del catálogo activo. */
+  _buildDecks(skip = null) {
+    const { s, cat, rng } = this;
+    const mk = (list) => list.map((x) => this.mk(x.id, x.img));
+    const mkAll = (defs) => mk(this._expand(defs, skip));
     const p = cat.pools;
     s.z.dungeon = rng.shuffle(mkAll(p.dungeon));
-    s.z.enemies = rng.shuffle(mkAll(p.enemies));
+    if (cat.variants.metalInmortal) { // Metal Inmortal: 18 enemigos y 12 tramas al azar (4 de 1 ojo, 6 de 2, 2 de 3)
+      s.z.enemies = rng.shuffle(mk(rng.shuffle(this._expand(p.enemies, skip)).slice(0, 18)));
+      const plotCards = this._expand(p.plots, skip); const chosen = [];
+      for (const [eyes, n] of [[1, 4], [2, 6], [3, 2]]) chosen.push(...rng.shuffle(plotCards.filter((x) => x.def.eyes === eyes)).slice(0, n));
+      s.z.plots = rng.shuffle(mk(chosen));
+    } else {
+      s.z.enemies = rng.shuffle(mkAll(p.enemies));
+      s.z.plots = rng.shuffle(mkAll(p.plots));
+    }
     s.z.loot = rng.shuffle([...mkAll(p.loot), ...mkAll(p.mimics)]);
     s.z.potions = rng.shuffle(mkAll(p.potions));
-    s.z.plots = rng.shuffle(mkAll(p.plots));
     s.z.trappings = mkAll(p.trappings);
     s.z.skills = mkAll(p.skills);
     s.z.afflictions = rng.shuffle(mkAll(p.afflictions));
     s.z.bosses = mkAll(p.bosses);
     if (cat.extras.environments) s.z.environments = rng.shuffle(mkAll(p.environments));
     if (cat.extras.artifacts) s.z.artifacts = rng.shuffle(mkAll(p.artifacts));
-    if (cat.extras.mercenaries) s.z.mercenaries = mkAll(p.mercs.map((d) => ({ ...d, copies: 1 })));
+    if (cat.extras.mercenaries && !s.chain?.index) s.z.mercenaries = mkAll(p.mercs.map((d) => ({ ...d, copies: 1 })));
     if (cat.extras.encounters) {
       // Iron Chest: mapa de encuentros del nivel de la aventura (hay dos copias idénticas; se elige una al azar)
       const maps = p.adventures.filter((a) => a.level === s.adventureLevel);
@@ -94,6 +117,11 @@ export class Game {
         s.encounter = { map: uid };
       }
     }
+  }
+
+  _build(heroDef) {
+    const { s, rng } = this;
+    this._buildDecks();
     // fichas de bendición: 12, boca abajo y barajadas (caras: salud / energía / veneno)
     const faces = [{ k: 'hp', n: 1 }, { k: 'hp', n: 1 }, { k: 'hp', n: 2 }, { k: 'hp', n: 2 }, { k: 'hp', n: 3 },
       { k: 'en', n: 1 }, { k: 'en', n: 1 }, { k: 'en', n: 2 }, { k: 'en', n: 2 }, { k: 'en', n: 3 },
@@ -110,15 +138,17 @@ export class Game {
       const uid = this._takeFromDeck('potions', heroDef.potion) || this.mk(heroDef.potion);
       this.acquire(uid, { silent: true, noWeightCheck: true });
     }
+    this._variantsSetup?.(heroDef); // ANEMIA 4.0: pueblo de origen, motivación, rumbo, Diablillo…
     this._askSetup();
   }
 
   /** Petición de preparación (tienda de equipo y, con La Posada del Troll Solitario, contratación de esbirros). */
   _askSetup() {
     // candidates = todos los esbirros de la posada (los contratados también; se distinguen por `hired`)
-    const inn = this.cat.extras.mercenaries
+    const inn = this.cat.extras.mercenaries && !this.s.chain?.index
       ? { candidates: [...this.s.z.mercenaries, ...this.s.mercs.map((m) => m.uid)].sort((a, b) => a - b), hired: this.s.mercs.map((m) => m.uid), max: MAX_MERCS } : null;
-    this.ask('setup', { shop: true, inn });
+    const o = this.s.origin; const m = this.s.motivation; const d = this.s.direction;
+    this.ask('setup', { shop: !this.s.chain?.index, inn, ...(o || m || d ? { intro: { origin: o || null, motivation: m || null, direction: d || null } } : {}) });
   }
 
   /* ============================================================================ eventos y utilidades */
@@ -189,7 +219,7 @@ export class Game {
   /* ============================================================================ estadísticas del héroe */
   get hero() { return this.s.hero; }
   maxHp() { return this.hero.maxHp + this.sumFx('maxHpBonus'); }
-  maxWeight() { return this.hero.encumbrance + this.hero.carryBonus + this.sumFx('carryBonus'); }
+  maxWeight() { return this.hero.carryRule === 'weaponsOnly' ? 0 : this.hero.encumbrance + this.hero.carryBonus + this.sumFx('carryBonus'); }
   /** ¿El héroe es de esta raza? (Gnome Pack) */
   isRace(name) { return !!this.hero.race && normName(this.hero.race) === normName(name); }
 
@@ -207,14 +237,15 @@ export class Game {
     if (n <= 0) return 0;
     const h = this.hero;
     if (stat === 'blessing') return this.gainBlessing(n, cause);
+    if (stat === 'poison' && this.poisonImmune()) { this.log('Sangre Envenenada: eres inmune al veneno.', 'skill'); return 0; }
     if (stat === 'energy' && h.divinidad === 'health' && this.hasSkill('S4')) {
       this.log(`Divinidad: conviertes ${n} de energía en salud.`, 'skill');
       return this.gain('hp', n, cause);
     }
     let cap = Infinity;
-    if (stat === 'hp') cap = this.maxHp(); else if (CAPS[stat]) cap = CAPS[stat];
+    if (stat === 'hp') cap = this.maxHp(); else if (stat === 'energy') cap = this.maxEnergy(); else if (CAPS[stat]) cap = CAPS[stat];
     const from = this._getStat(stat);
-    const to = Math.min(cap, from + n);
+    const to = Math.max(from, Math.min(cap, from + n)); // nunca baja si ya estás por encima del tope (Sangre de Lobo, Necronomicón)
     this._setStat(stat, to, cause);
     const got = to - from;
     // Mediano: cada ración ganada da también 1 de salud
@@ -229,10 +260,15 @@ export class Game {
     const to = Math.max(0, from - n);
     this._setStat(stat, to, cause);
     if (stat === 'hp' && n >= 3 && !VOLUNTARY_HP.has(cause)) this._mercHurt?.(n);
+    if (stat === 'gold' && from > to) this._mercSpendGold?.(cause);
     return from - to;
   }
+  /** ¿Eres inmune al veneno? (Sangre Envenenada) */
+  poisonImmune() { return this.activeSources().some((x) => x.def.fx?.poisonImmune); }
+  /** tope de energía: 14 fichas (+1 por cada «Gastar puntos de experiencia») */
+  maxEnergy() { return CAPS.energy + (this.hero.energyBonus || 0); }
   gainBlessing(n, cause = '') {
-    if (this.hasSkill('S21')) { this.log('Drenaje Vital: no puedes ganar fichas de bendición.', 'skill'); return 0; }
+    if (this.hasSkill('S21') || this.activeSources().some((x) => x.def.fx?.noBlessings)) { this.log('Drenaje Vital / Artes Oscuras: no puedes ganar fichas de bendición.', 'skill'); return 0; }
     let got = 0;
     for (let i = 0; i < n; i++) {
       if (!this.s.z.blessingPile.length) break;
@@ -269,17 +305,25 @@ export class Game {
   checkDeath() {
     const h = this.hero;
     if (this.s.over) return true;
-    if (h.hp <= 0) { this.endGame('defeat', 'Tu salud ha llegado a 0.'); return true; }
-    if (h.poison > 0 && h.poison >= h.hp) { this.endGame('defeat', 'El veneno ha igualado tu salud: sucumbes.'); return true; }
+    if (this.s.parca?.stage === 'offer') return true; // ya estás ante La Parca
+    if (h.hp <= 0) { this._die('Tu salud ha llegado a 0.'); return true; }
+    if (h.poison > 0 && h.poison >= h.hp) { this._die('El veneno ha igualado tu salud: sucumbes.'); return true; }
     return false;
   }
-  endGame(result, reason) {
+  /** El héroe muere: con «Enfrentarse a La Parca» se le ofrece combatir; si no, la partida termina. */
+  _die(reason) {
+    if (this.s.over) return;
+    if (this._parcaOffer?.(reason)) return;
+    this.endGame('defeat', reason);
+  }
+  endGame(result, reason, extra = {}) {
     if (this.s.over) return;
     const score = result === 'victory' ? this.score() : null;
-    this.s.over = { result, reason, score };
+    const epilogue = result === 'defeat' ? this._epilogue?.() || null : null; // «Muertes Atroces»
+    this.s.over = { result, reason, score, ...(epilogue ? { epilogue } : {}), ...extra };
     this.s.prompt = null; this.q = [];
     this.log(result === 'victory' ? '¡Victoria!' : `Has muerto. ${reason}`, 'end');
-    this.emit('gameover', { result, reason, score });
+    this.emit('gameover', { result, reason, score, ...(epilogue ? { epilogue } : {}), ...extra });
   }
 
   /* ============================================================================ dados */
@@ -297,7 +341,7 @@ export class Game {
     const e = this.s.eq;
     for (const slot of ['MP', 'OM', 'CA', 'CP']) if (e[slot]) out.push({ uid: e[slot], def: this.def(e[slot]), slot });
     for (const u of e.AC) out.push({ uid: u, def: this.def(u), slot: 'AC' });
-    for (const id of this.hero.skills) out.push({ uid: null, def: this.cat.def(id), slot: 'skill' });
+    for (const id of this.hero.skills) if (id !== this.s.lvl.forgotten) out.push({ uid: null, def: this.cat.def(id), slot: 'skill' }); // Amnesia: una habilidad olvidada por nivel
     for (const u of this.hero.afflictions) out.push({ uid: u, def: this.def(u), slot: 'affliction' });
     for (const m of this.s.mercs || []) out.push({ uid: m.uid, def: this.def(m.uid), slot: 'merc' });
     return out;
@@ -308,7 +352,7 @@ export class Game {
     return n;
   }
   hasCode(code) { return this.activeSources().some((x) => x.def.key === code); }
-  hasSkill(code) { return this.hero.skills.some((id) => this.cat.def(id).key === code); }
+  hasSkill(code) { return this.hero.skills.some((id) => this.cat.def(id).key === code && id !== this.s.lvl.forgotten); }
   hasAffliction(code) { return this.hero.afflictions.some((u) => this.def(u).key === code); }
   hasMerc(code) { return (this.s.mercs || []).some((m) => this.def(m.uid).key === code); }
   equippedUid(code) { const x = this.activeSources().find((s) => s.def.key === code && s.uid && s.slot !== 'merc'); return x ? x.uid : null; }
@@ -330,7 +374,18 @@ export class Game {
     if (zero) w = 0;
     return w;
   }
+  /** La Bestia (carga "*"): solo puede llevar dos armas de una mano o una de dos manos. Devuelve cuántos objetos sobran. */
+  _beastExcess() {
+    const items = this.allItems().filter((u) => this.weightOf(u) > 0 && !this.def(u).fx?.cursed); // lo maldito no se puede soltar
+    const weapons = items.filter((u) => ['MP', 'OM', '2M'].includes(this.def(u).slot));
+    const two = weapons.filter((u) => this.def(u).slot === '2M').length; const one = weapons.length - two;
+    const others = items.length - weapons.length;
+    const keepTwo = two > 0 ? weapons.length - 1 : Infinity; // me quedo con una sola arma a dos manos
+    const keepOne = two + Math.max(0, one - 2);             // me quedo con dos armas de una mano
+    return others + (two === 0 && one <= 2 ? 0 : Math.min(keepTwo, keepOne));
+  }
   weight() {
+    if (this.hero.carryRule === 'weaponsOnly') return this._beastExcess();
     let total = 0; const accs = [];
     for (const u of this.allItems()) {
       const w = this.weightOf(u);
@@ -361,6 +416,7 @@ export class Game {
   _canAutoEquip() { return true; }
   _slotFree(d) {
     const e = this.s.eq;
+    if (this.hero.armLost && (d.slot === 'OM' || d.slot === '2M')) return false; // Justo Antes de Morir
     if (d.slot === '2M') return !e.MP && (!e.OM || !!this.def(e.OM).fx?.withTwoHanded);
     if (d.slot === 'OM') return !e.OM && (!this.twoHanded() || !!d.fx?.withTwoHanded);
     return !e[d.slot];
@@ -374,7 +430,7 @@ export class Game {
     if (this.isOverweight()) this.ask('overweight', { need: this.weight() - this.maxWeight() });
   }
   /** ¿Puede ir este objeto en la mano secundaria? (cualquier OM, o una daga con Doble Arma) */
-  _fitsOffHand(d) { return d.slot === 'OM' || (!!d.fx?.dagger && this.hasSkill('S10')); }
+  _fitsOffHand(d) { return !this.hero.armLost && (d.slot === 'OM' || (!!d.fx?.dagger && this.hasSkill('S10'))); }
 
   equip(uid) {
     const d = this.def(uid);
@@ -383,6 +439,7 @@ export class Game {
     const idx = this.s.z.hand.indexOf(uid);
     if (idx < 0) this.fail('Ese objeto no está en tu mano.');
     if (!d.slot) this.fail(`${d.name} no se puede equipar.`);
+    if (this.hero.armLost && (d.slot === 'OM' || d.slot === '2M')) this.fail('Has perdido el uso de tu otra mano: no puedes equipar eso.');
     if (d.slot === 'AC') { this.s.z.hand.splice(idx, 1); e.AC.push(uid); this.emit('equip', { uid, slot: 'AC' }); return; }
     // comprobar antes de mover nada (los objetos malditos no se pueden quitar)
     const blockers = [];
@@ -447,6 +504,7 @@ export class Game {
     const d = this.def(uid);
     this.s.z[this.pileFor(d)].push(uid);
     this.emit('discardCard', { uid, why });
+    if (why === 'use') this._incantation?.(d); // «Encantamientos»
     return true;
   }
   /** destruye un objeto del héroe (sale de la partida) */
@@ -481,6 +539,10 @@ export class Game {
     if (uid) this.hero.skillCards[id] = uid;
     this.emit('learnSkill', { id, uid, free: true });
     if (this.cat.def(id).key === 'S2') this._alchemyStart = true;
+    const lfx = this.cat.def(id).fx || {};
+    if (lfx.hpOnLearn) this._setStat('hp', this.hero.hp + lfx.hpOnLearn, 'habilidad');       // Sangre Envenenada: +7 de salud
+    if (lfx.moralityOnLearn) this.addMorality(lfx.moralityOnLearn);                           // Artes Oscuras
+    if (lfx.potionOnLearn) this.gainPotion(lfx.potionOnLearn);
   }
   skillCost(skillId) { return this.cat.def(skillId).proficiency === this.hero.proficiency ? 3 : 5; }
   unspentEnemies() { return this.s.z.graveyard.filter((e) => !e.spent); }
@@ -503,14 +565,16 @@ export class Game {
     const h = this.hero;
     const items = this.allItems().reduce((n, u) => n + (this.def(u).price || 0), 0);
     const parts = {
-      hp: h.hp, energy: h.energy, gold: h.gold * 3, enemies: this.s.z.graveyard.length * 2, items,
-      level: Math.min(5, this.s.level) * 2, morality: this.morality(),
+      hp: h.hp, energy: h.energy, gold: (h.gold + (this.s.variants?.sinRetorno ? 25 : 0)) * 3, // Sin Retorno: +25 monedas para el recuento
+      enemies: this.s.z.graveyard.length * 2, items, level: Math.min(5, this.s.level) * 2, morality: this.morality(),
     };
     if (h.scoreBonus) parts.bonus = h.scoreBonus; // Mizlak el Mendigo: +10 si completas la partida
     const total = Object.values(parts).reduce((a, b) => a + b, 0);
     const ranks = [[61, 'Fortaleza'], [51, 'Mansión'], [41, 'Granja'], [31, 'Cabaña'], [0, 'Tugurio']];
-    const rank = ranks.find(([min]) => total >= min)[1];
-    return { total, parts, rank };
+    let rank = ranks.find(([min]) => total >= min)[1];
+    if (this.s.game.mansion && ['Tugurio', 'Cabaña', 'Granja'].includes(rank)) rank = 'Mansión'; // Hogar Soñado: ya vives en tu mansión
+    const retreat = this._retreatText?.(rank) || null;                                       // «Lugares de Retiro»
+    return { total, parts, rank, ...(retreat ? { retreat } : {}) };
   }
 
   /* ============================================================================ guardado */
@@ -519,6 +583,7 @@ export class Game {
   }
   static restore(json) {
     const { s, rng } = JSON.parse(json);
+    s.variants ||= {}; s.chain ||= null;
     const cat = buildCatalog(s.config);
     const g = new Game(cat, s, new RNG(rng));
     return g;
@@ -586,8 +651,15 @@ ACTIONS.drop = freeAct(function ({ uid }) {
   this.discardOwned(uid, 'drop'); this.log(`Sueltas ${d.name}.`, 'inv');
 });
 ACTIONS.use = {
-  in: [...FREE, 'attack', 'pre', 'pair', 'avoidCard'],
-  run({ uid }) { this.useItem(uid); this.emit('prompt', { prompt: this.s.prompt }); },
+  in: [...FREE, 'attack', 'pre', 'pair', 'avoidCard', 'overweight'],
+  run({ uid }) {
+    const wasOver = this.s.prompt?.type === 'overweight';
+    this.useItem(uid);
+    if (wasOver && this.s.prompt?.type === 'overweight') { // beber una poción en vez de soltarla
+      if (this.isOverweight()) this.s.prompt.need = this.weight() - this.maxWeight(); else this.clear();
+    }
+    if (!(wasOver && !this.s.prompt)) this.emit('prompt', { prompt: this.s.prompt });
+  },
 };
 ACTIONS.eat = freeAct(function () {
   if (this.hero.rations < 1) this.fail('No tienes raciones.');

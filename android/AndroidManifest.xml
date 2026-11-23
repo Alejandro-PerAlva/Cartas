@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Iron Helm Digital · envoltorio Android mínimo (WebView sin conexión).
+  Sin permisos: el juego va empaquetado en assets/ y no necesita red.
+  versionCode / versionName y minSdk / targetSdk los inyecta aapt2 desde tools/build-apk.mjs.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="app.ironhelm.digital">
+
+    <!-- Sin <uses-permission>: ni INTERNET ni almacenamiento. -->
+
+    <application
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:theme="@style/AppTheme"
+        android:allowBackup="false"
+        android:hardwareAccelerated="true"
+        android:supportsRtl="false"
+        android:usesCleartextTraffic="false"
+        android:resizeableActivity="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="fullSensor"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode|density|fontScale|layoutDirection|colorMode|locale">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

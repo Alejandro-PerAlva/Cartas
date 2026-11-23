@@ -448,7 +448,7 @@ test('gen-data: ids únicos entre todas las expansiones; las colisiones de códi
 });
 test('listPacks(): contrato para el menú (paquetes, viñetas, recuentos, héroes, jefe, cartas clave, exclusivos, gnome)', () => {
   const lp = listPacks();
-  assert.equal(lp.packs.length, 15);
+  assert.equal(lp.packs.length, 16); // 15 oficiales + ANEMIA 4.0 (modo fanmade)
   for (const p of lp.packs) {
     for (const k of ['id', 'name', 'es', 'type', 'number', 'blurb', 'rules', 'counts', 'heroes', 'boss', 'keyCards', 'intro']) assert.ok(k in p, `${p.id}.${k}`);
     assert.ok(p.keyCards.length > 0 && p.keyCards.length <= 8, p.id); assert.ok(p.rules.length > 0, p.id);

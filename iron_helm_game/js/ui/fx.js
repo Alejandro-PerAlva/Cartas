@@ -26,8 +26,9 @@ export class Ghost {
     if (arc) frames.push({ transform: this._tf({ x: (from.x + rect.x) / 2, y: midY, w: (from.w + rect.w) / 2 * 1.08, h: (from.h + rect.h) / 2 * 1.08 }, (this.rot + rot) / 2), offset: 0.5 });
     frames.push({ transform: this._tf(rect, rot) });
     if (f !== null) setTimeout(() => this.card.classList.toggle('up', f), ms * 0.28 + delay);
-    await animate(this.el, frames, { duration: ms, easing: e, delay });
+    const a = await animate(this.el, frames, { duration: ms, easing: e, delay });
     this.rect = rect; this.rot = rot; this.el.style.transform = this._tf(rect, rot);
+    a?.cancel?.();   // la animación terminada ya no debe pisar la posición (si no, no se podría recolocar al girar la pantalla)
     return this;
   }
   remove() { this.el.remove(); }

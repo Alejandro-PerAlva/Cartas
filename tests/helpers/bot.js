@@ -24,6 +24,10 @@ export function audit(g) {
   (s.mercs || []).forEach((m) => put(m.uid, 'mercs'));
   if (s.env) put(s.env, 'env');
   if (s.combat && !seen.has(s.combat.uid)) put(s.combat.uid, 'combat');
+  // ANEMIA: series de combates (Arena de Combate), La Parca (combate principal guardado, esbirros, carta de La Parca)
+  (s.ctx.seriesQueue || []).forEach((u) => put(u, 'ctx.seriesQueue'));
+  if (s.parca?.card != null && !seen.has(s.parca.card)) put(s.parca.card, 'parca');
+  if (s.afterlife) { (s.afterlife.mercs || []).forEach((m) => put(m.uid, 'afterlife.mercs')); if (s.afterlife.combat && !seen.has(s.afterlife.combat.uid)) put(s.afterlife.combat.uid, 'afterlife.combat'); }
   (s.ctx.inPlay || []).forEach((u) => { if (!seen.has(u)) put(u, 'ctx.inPlay'); });
   const pr = s.prompt;
   if (pr?.uids && ['pickCards'].includes(pr.type)) pr.uids.forEach((u) => { if (!seen.has(u)) put(u, 'prompt'); });
@@ -35,7 +39,7 @@ export function audit(g) {
 export function checkInvariants(g) {
   const h = g.s.hero; const errs = [];
   for (const k of ['hp', 'energy', 'rations', 'gold', 'poison']) if (!Number.isFinite(h[k]) || h[k] < 0) errs.push(`${k}=${h[k]}`);
-  if (h.hp > g.maxHp()) errs.push(`hp ${h.hp} > máx ${g.maxHp()}`);
+  if (h.hp > g.maxHp() + (g.s.game.wolf ? 3 * g.s.game.wolf : 0)) errs.push(`hp ${h.hp} > máx ${g.maxHp()}`); // Sangre de Lobo: exceso temporal
   if (h.morality < -5 || h.morality > 5) errs.push(`moral ${h.morality}`);
   if (h.blessings.length > 12) errs.push('demasiadas bendiciones');
   if (g.s.eyes < 0) errs.push('ojos negativos');
@@ -72,9 +76,11 @@ export function play(g, { seed = 1, maxSteps = 3000, style = 'random', stopAt = 
         if (d.code === 'P2' && h.poison >= 2 && r() < 0.8) { if (act('use', { uid: u }).ok) return true; }
         if (['L1', 'P6', 'L20', 'T19', 'T29'].includes(d.code) && h.energy <= 5 && r() < 0.6) { if (act('use', { uid: u }).ok) return true; }
         if (['L46', 'T26'].includes(d.code) && h.hp <= g.maxHp() - 3 && r() < 0.7) { if (act('use', { uid: u }).ok) return true; }
+        if (d.code === 'ANP1' && h.hp <= g.maxHp() - 3 && r() < 0.5) { if (act('use', { uid: u }).ok) return true; }
         if (['L26', 'L32'].includes(d.code) && r() < 0.3) { if (act('use', { uid: u }).ok) return true; }
       }
       for (const m of s.mercs || []) if (m.morale < m.max && h.gold > 2 && r() < 0.5) { if (act('payMorale', { uid: m.uid }).ok) return true; }
+      if (s.variants?.gastarXP && g.unspentEnemies().length >= 7 && r() < 0.5) { if (act('spendXp', { stat: r() < 0.5 ? 'hp' : 'energy' }).ok) return true; }
       for (const u of s.z.hand.slice()) { if (r() < 0.7 && act('equip', { uid: u }).ok) return true; }
       for (const sk of s.z.skills) { const id = s.cards[sk].id; if (g.canLearn(id) && r() < 0.8) { if (act('learn', { id }).ok) return true; } }
       return false;
@@ -126,6 +132,10 @@ export function play(g, { seed = 1, maxSteps = 3000, style = 'random', stopAt = 
         if (pr.potions.length && r() < 0.5) { act('potionAttack', { uid: pr.potions[0] }); break; }
         if (pr.throwables.length && r() < 0.3) { act('throwItem', { uid: pr.throwables[0] }); break; }
         for (const u of g.allItems()) { const d = g.def(u); if (['L5', 'P1'].includes(d.code) && h.hp <= 5 && r() < 0.9) { act('use', { uid: u }); break; } }
+        for (const u of g.allItems()) { // pociones de combate de ANEMIA (la Bomba de Dios, rara vez)
+          const k = g.def(u).key; if (['ANP2', 'ANP3', 'ANP4'].includes(k) && r() < 0.4) { act('use', { uid: u }); break; } if (k === 'ANT3' && r() < 0.04) { act('use', { uid: u }); break; }
+        }
+        if (g.s.prompt?.type === 'attack' && pr.rest && r() < 0.6) { act('special', { id: 'rest' }); break; }
         if (g.s.prompt?.type !== 'attack') break;
         if (pr.payHp?.length && r() < 0.25) { const o = pick(pr.payHp); const n = 1 + Math.floor(r() * 2); if (h.hp > n + o.extra + 3 && act('attack', { energy: n, payHp: o.id }).ok) break; }
         const e = pr.hasWeapon ? Math.min(pr.maxEnergy, 1 + Math.floor(r() * 3)) : 0;

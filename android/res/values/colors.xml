@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fondo del tapete: el mismo que usa el juego, para que no haya parpadeo blanco. -->
+    <color name="ih_bg">#0d0805</color>
+    <color name="ih_gold">#c4a25c</color>
+</resources>

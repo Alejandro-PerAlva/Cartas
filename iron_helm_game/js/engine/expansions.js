@@ -15,7 +15,7 @@ Object.assign(Game.prototype, {
   _drawEnvironment() {
     const z = this.s.z;
     if (this.s.env) { z.environmentsDiscard.push(this.s.env); this.s.env = null; }
-    const uid = this.draw('environments');
+    const uid = (this.s.variants?.entornosTematicos && this._themedEnvironment?.()) || this.draw('environments');
     if (!uid) return;
     this.s.env = uid;
     const d = this.def(uid);
@@ -70,17 +70,20 @@ Object.assign(Game.prototype, {
     if (d.fx?.carryBonus) this.insert(this._weightCheck); // sin Yak puede sobrarte peso
   },
   /** Matilda: pierde 1 de moral cada vez que recibes 3 o más de daño */
-  _mercHurt(n) { if (n >= 3) this._mercLose('HM2', 1, `recibes ${n} de daño`); },
+  _mercHurt(n) {
+    if (n >= 3) this._mercLose('HM2', 1, `recibes ${n} de daño`);
+    if (n >= 6) this._mercLose('ANM1', 1, `recibes ${n} de daño`); // David Galahad: 6 o más
+  },
   /** Farzad: pierde 1 de moral por cada ojo que ganes */
   _mercEyes(n) { this._mercLose('HM6', n, 'ganas ojos'); },
   /** al empezar un combate: Yak (no muertos) y Bogdana (enemigos de 5+ de salud) */
   _mercOnCombat(c) {
-    if (c.weakness === 'undead') this._mercLose('HM3', 1, `encuentro con ${c.name}`);
+    if (this._isWeak(c, 'undead')) this._mercLose('HM3', 1, `encuentro con ${c.name}`);
     if (c.baseHp >= 5) this._mercLose('HM5', 1, `combate contra ${c.name}`);
   },
   /** al derrotar a un enemigo: Godfrey (no muertos) y Olive (6+ de salud) */
   _mercOnDefeat(c) {
-    if (c.weakness !== 'undead') this._mercLose('HM7', 1, `derrotas a ${c.name}, que no es un no muerto`);
+    if (!this._isWeak(c, 'undead')) this._mercLose('HM7', 1, `derrotas a ${c.name}, que no es un no muerto`);
     if (c.baseHp >= 6) this._mercLose('HM8', 1, `derrotas a ${c.name}`);
   },
   /** efectos automáticos de los esbirros en el Campamento */
@@ -91,6 +94,8 @@ Object.assign(Game.prototype, {
     if (this.hasMerc('HM5')) { this.gain('energy', 3, 'bogdana'); this.log('Bogdana te prepara una suculenta comida: +3 de energía.', 'merc'); }
     if (this.hasMerc('HM8') && this.hero.poison > 0) { this.lose('poison', this.hero.poison, 'olive'); this.log('Olive cura tus dolencias: eliminas todo el veneno.', 'merc'); }
     if (this.hasMerc('HM6')) this.log('Farzad solo se dedica a descansar.', 'merc');
+    this._gralCamp?.();   // ANEMIA: Gral puede intentar robarte el oro
+    this._campMoment?.(); // ANEMIA: Momentos de Paz y Descanso
   },
   /** fin de nivel: Borko necesita comer; a Eydis hay que pagarle 1 de oro */
   _mercUpkeep() {

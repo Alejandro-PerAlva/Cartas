@@ -20,3 +20,18 @@ desktop.ini
 node_modules/
 .playwright/
 shots/
+
+# Android / APK: artefactos temporales y secretos de firma (NUNCA al repositorio)
+android/build/
+.ironhelm/
+*.jks
+*.keystore
+*.p12
+*.pfx
+keystore.pass
+*.idsig
+*.apk.idsig
+local.properties
+
+# La APK versionada se reconstruye con `npm run apk`; solo se sube la copia estable
+releases/IronHelm-*.apk

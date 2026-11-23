@@ -159,3 +159,10 @@ Loco) no se quitan. Con *Doble Arma* una daga puede ir en la otra mano.
   ataca pagando salud (n dados = n de salud) y +1 bendición si ese ataque mata. Mediano: +1 ración inicial y +1 de salud por
   ración ganada. Semiorco: evita gratis orcos, grunkles y goblins (no jefes). Enano, Elfo y Tritón según su carta.
 - **Mizlak el Mendigo**: +10 puntos solo si ganas (`score().parts.bonus`).
+
+### ANEMIA 4.0 (modo fanmade) y reglas variantes
+Detalle completo (cobertura carta a carta, las 15 variantes y las ambigüedades del libro) en `docs/EXPANSIONS.md` §6. Resumen de las reglas que cambian el
+motor en cualquier partida con el modo activo: la **energía** puede superar 14 con la Sangre de Lobo y el Necronomicón; un enemigo puede tener **dos
+debilidades** (Samurái de las Sombras) y los jefes de ANEMIA entran en el sorteo por debilidad; **La Bestia** solo carga armas; las **aflicciones** nuevas
+(Amnesia, Fiebre del Oro, Adrenalina) y los peligros del mazo de enemigos (Nube Gaseosa, Arenas Movedizas, Poza de Ácido) se resuelven como las del juego base.
+Las reglas variantes (`config.variants`) son opcionales e independientes; las que no usan cartas del modo (Diablillo, Pueblo de Origen, Cero Energía…) funcionan con cualquier partida.

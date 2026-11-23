@@ -6,13 +6,15 @@
  * El estado que se dibuja es un "estado de vista" (`vs`) que el director va moviendo al ritmo de las animaciones.
  */
 import { h } from './dom.js';
-import { L, configureLayout, CARD_D, CARD_C, CARD_P, CARD_X, BANK_TOTAL, cardRect, center } from './layout.js';
+import { L, configureLayout, CARD_D, CARD_C, CARD_X, cardRect, center } from './layout.js';
 import { cardEl, backOf, backOfDeck, cardPath } from './cards.js';
 import { Camera } from './camera.js';
 import { Drag } from './drag.js';
+import { mapSpotsFor } from './mapspots.js';
 
-const SQUARE = new Set(['ration', 'energy']);
-const MAXCHIPS = { gold: 8, poison: 8, health: 8, blessing: 9, ration: 8, energy: 8 };
+const SQUARE = new Set(['ration']);
+/** fichas que se dibujan como máximo en un pocillo (tres capas de siete) */
+const PILE_MAX = 21;
 
 export class Table {
   constructor(app, root) {
@@ -45,27 +47,27 @@ export class Table {
     this.table.append(this.surface, this.boardD, this.boardC, this.dmat, this.cmat, this.layerD, this.layerC);
     this.viewport.append(this.table, h('div#lightfx'));
     this.root.append(this.viewport);
-    this.cam = new Camera(this.viewport, this.table, { ...B.dungeon }, { safe: () => this.safeInsets() });
-    this.cam.onResize = () => { if (!this.userMoved) this.fit(false); };
+    // el suelo de madera acompaña a la cámara (un único tablón continuo, sin bordes de mesa)
+    this.cam = new Camera(this.viewport, this.table, { ...B.dungeon }, { safe: () => this.safeInsets(), onChange: (c) => { this.viewport.style.backgroundSize = `${1000 * c.s}px`; this.viewport.style.backgroundPosition = `${c.x}px ${c.y}px`; } });
+    this.cam.onResize = () => this.fit(false);
+    this.cam.onUser = () => { this.userMoved = true; };       // solo cuenta si el jugador de verdad mueve o acerca la mesa (no un simple toque)
     this._panels();
     this._staticParts();
   }
   _rectStyle(r) { return { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' }; }
   safeInsets() {
     const small = innerWidth < 760 || innerHeight < 520; const narrow = innerWidth < 520;
-    return { t: narrow ? 92 : small ? 52 : 62, b: small ? 56 : 74, l: 6, r: 6 };
+    // con la mochila abierta en el tablero de personaje, la mesa se encuadra por encima de ella
+    return { t: narrow ? 92 : small ? 52 : 62, b: (small ? 56 : 74) + (this.app.trayInset?.() || 0), l: 6, r: 6 };
   }
 
   /** Paneles de madera del tablero de personaje y franja de expansiones */
   _panels() {
     const Z = L.ZONES;
     const add = (layer, el) => { this.layers[layer].append(el); return el; };
-    // mochila
-    this.packPanel = add('c', h('div.panel.pack', { style: this._rectStyle(Z.pack) },
-      h('div.panel-title', 'MOCHILA'), this.packInfo = h('div.panel-sub')));
-    this.trashEl = add('c', h('div.trash', { style: this._rectStyle(Z.trash), dataset: { drop: 'trash' } }, h('span', '✕'), h('b', 'SOLTAR AQUÍ'), h('small', 'para descartar un objeto')));
-    // lateral: ficha del aventurero
+    // lateral: ficha del aventurero, compañeros, aflicciones y papelera
     this.sidePanel = add('c', h('div.panel.side', { style: this._rectStyle(Z.side) }, h('div.panel-title', 'AVENTURERO')));
+    this.trashEl = add('c', h('div.trash', { style: this._rectStyle(Z.trash), dataset: { drop: 'trash' } }, h('span', '✕'), h('b', 'SOLTAR AQUÍ'), h('small', 'arrastra un objeto para descartarlo')));
     // franja de expansiones
     if (L.extras) {
       this.stripPanel = add('d', h('div.panel.strip', { style: this._rectStyle(Z.strip) }, h('div.panel-title', 'EXPANSIONES')));
@@ -76,21 +78,21 @@ export class Table {
   _staticParts() {
     const Z = L.ZONES;
     for (const name of Object.keys(Z)) {
-      if (['pack', 'trash', 'side', 'strip', 'mercs', 'afflictions'].includes(name)) continue;
+      if (['trash', 'side', 'strip', 'mercs', 'afflictions'].includes(name)) continue;
       if (name.startsWith('x_') && !L.extras) continue;
       const z = Z[name];
       const hit = h('div.slot-hit', { dataset: { zone: name }, style: this._rectStyle(z) });
       hit.addEventListener('click', (e) => { if (this.cam.wasDrag()) return; e.stopPropagation(); this.app.onZoneTap(name, e); });
-      this.layers[z.mat].append(hit);
+      this.layers[z.mat].append(hit); (this.hits ||= {})[name] = hit;
     }
-    // números de la reserva (mazmorra) → ninguno: la reserva es decorativa. Números del personaje:
-    this.cwNums = {};
-    for (const [k, w] of Object.entries(L.CWELLS)) { const n = h('div.cw-num', { style: { left: w.cx + 'px', top: w.cy + 'px' } }); this.layerC.append(n); this.cwNums[k] = n; }
+    // pocillos: las fichas del héroe se ven en los dos tapetes (sin números: la cifra está en la barra superior)
     this.wellHits = {};
-    for (const [k, w] of Object.entries(L.CWELLS)) {
-      const hit = h('div.well-hit', { dataset: { well: k }, style: { left: w.cx - w.r + 'px', top: w.cy - w.r + 'px', width: w.r * 2 + 'px', height: w.r * 2 + 'px' } });
-      hit.addEventListener('click', (e) => { e.stopPropagation(); this.app.onWellTap(k, hit); });
-      this.layerC.append(hit); this.wellHits[k] = hit;
+    for (const [wells, layer, tag] of [[L.CWELLS, this.layerC, 'c'], [L.WELLS, this.layerD, 'd']]) {
+      for (const [k, w] of Object.entries(wells)) {
+        const hit = h('div.well-hit', { dataset: { well: k, mat: tag }, style: { left: w.cx - w.r + 'px', top: w.cy - w.r + 'px', width: w.r * 2 + 'px', height: w.r * 2 + 'px' } });
+        hit.addEventListener('click', (e) => { e.stopPropagation(); this.app.onWellTap(k, hit); });
+        layer.append(hit); this.wellHits[tag + k] = hit;
+      }
     }
     // peones
     this.pawnLevel = h('div.pawn'); this.pawnMoral = h('div.pawn.blue');
@@ -105,13 +107,14 @@ export class Table {
   defaultFrame() {
     const small = innerWidth < 760 || innerHeight < 520; const portrait = innerHeight > innerWidth;
     if (this.tab === 'dungeon') return small ? (portrait ? L.FOCUS.doorsP : L.FOCUS.doors) : L.FOCUS.dungeon;
+    if (small && !portrait) return L.FOCUS.charTop;
     return portrait || small ? L.FOCUS.charMat : L.FOCUS.char;
   }
   fit(animate = true) { this.userMoved = false; return this.cam.frame(this.defaultFrame(), { animate, pad: 0.01 }); }
   focus(name, animate = true) { return this.cam.frame(L.FOCUS[name], { animate, pad: 0.02 }); }
   setTab(tab, { animate = true } = {}) {
     if (tab === this.tab && this._tabReady) return this.fit(animate);
-    this.tab = tab; this._tabReady = true;
+    this.tab = tab; this._tabReady = true; if (this.vs) this.render();   // (las cartas del tapete son arrastrables solo en el tablero de personaje)
     const b = L.BOARDS[tab === 'dungeon' ? 'dungeon' : 'char'];
     this.cam.bounds = { x: b.x, y: b.y, w: b.w, h: b.h };
     this.root.dataset.tab = tab; this.userMoved = false;
@@ -138,9 +141,9 @@ export class Table {
       pair: z.pair.slice(), hidePair: [false, false],
       eq: { MP: s.eq.MP, OM: s.eq.OM, CA: s.eq.CA, CP: s.eq.CP, AC: s.eq.AC.slice() }, hand: z.hand.slice(),
       skills: h2.skills.map((id) => ({ id, uid: h2.skillCards[id] })), afflictions: h2.afflictions.slice(),
-      env: s.env ?? null, mercs: (s.mercs || []).map((m) => ({ ...m })), encounter: s.encounter ? { ...s.encounter } : null, adventureLevel: s.adventureLevel || 1,
+      imp: s.imp ?? null, env: s.env ?? null, mercs: (s.mercs || []).map((m) => ({ ...m })), encounter: s.encounter ? { ...s.encounter } : null, adventureLevel: s.adventureLevel || 1,
       stats: { hp: h2.hp, maxHp: g.maxHp(), energy: h2.energy, gold: h2.gold, rations: h2.rations, poison: h2.poison, blessing: h2.blessings.length, morality: g.morality(), level: s.level, turn: s.turn, eyes: s.eyes, weight: g.weight(), maxWeight: g.maxWeight() },
-      heroId: s.heroId, canEquip: ['turn', 'setup'].includes(s.prompt?.type),
+      heroId: s.heroId, canEquip: ['turn', 'setup'].includes(s.prompt?.type), invCount: g.allItems().length,
       learnable: z.skills.some((u) => g.canLearn(g.def(u).id)),
     };
   }
@@ -172,7 +175,7 @@ export class Table {
   /* ================================================================ renderizado */
   render() {
     if (!this.vs) return;
-    this._decks(); this._piles(); this._doors(); this._char(); this._pack(); this._side(); this._tokens(); this._trackers(); this._plaque(); this._extras(); this._applyCue();
+    this._decks(); this._piles(); this._doors(); this._char(); this._side(); this._tokens(); this._trackers(); this._plaque(); this._imp(); this._extras(); this._applyCue(); this._live();
   }
 
   /** Mazo: pila de dorsos con grosor y contador */
@@ -268,7 +271,8 @@ export class Table {
   _char() {
     const v = this.vs; const g = this.game; const eq = v.eq;
     const heroDef = this.cat.pools.heroes.find((x) => x.id === v.heroId) || this.cat.pools.heroes[0];
-    const slotCard = (key, zone, uid, opts = {}) => this.slot(key, 'c', [uid, opts.dim, opts.src, opts.tag, v.canEquip], () => {
+    const dragOk = !!this.app.tray?.dragOk();
+    const slotCard = (key, zone, uid, opts = {}) => this.slot(key, 'c', [uid, opts.dim, opts.src, opts.tag, v.canEquip, dragOk], () => {
       if (!uid && !opts.src) return null;
       const rect = cardRect(zone, CARD_C);
       if (opts.src) { // carta decorativa (héroe)
@@ -278,7 +282,7 @@ export class Table {
         el.addEventListener('click', (e) => { if (this.cam.wasDrag()) return; e.stopPropagation(); this.app.onZoneTap(zone, e); });
         return el;
       }
-      const el = this.tableCard(uid, rect, { cls: opts.dim ? 'dim' : '', onclick: () => this.app.onCardTap(uid, zone), drag: v.canEquip && !opts.dim ? { from: zone } : null });
+      const el = this.tableCard(uid, rect, { cls: opts.dim ? 'dim' : '', onclick: () => this.app.onCardTap(uid, zone), drag: v.canEquip && !opts.dim && dragOk ? { from: zone } : null });
       if (opts.tag) el.append(h('div.slot-tag', opts.tag));
       return el;
     });
@@ -286,114 +290,98 @@ export class Table {
     slotCard('c_head', 'c_head', eq.CA); slotCard('c_body', 'c_body', eq.CP); slotCard('c_main', 'c_main', eq.MP);
     const two = eq.MP && g.def(eq.MP).slot === '2M';
     if (eq.OM) slotCard('c_off', 'c_off', eq.OM); else if (two) slotCard('c_off', 'c_off', eq.MP, { dim: true, tag: 'DOS MANOS' }); else this.slot('c_off', 'c', ['none'], () => null);
-    // habilidades: cascada
+    // habilidades: cascada centrada en la ranura (la primera carta queda a la misma altura que las demás)
     this.slot('c_skills', 'c', v.skills.map((s) => s.id), () => {
       const list = v.skills; if (!list.length) return null;
-      const zn = L.ZONES.c_skills; const box = h('div', { style: { position: 'absolute', left: zn.x + 'px', top: zn.y + 'px', width: zn.w + 'px', height: zn.h + 'px', zIndex: 4 } });
-      const step = list.length > 1 ? Math.min(46, (zn.h - CARD_C.h) / (list.length - 1) || 0) : 0;
+      const zn = L.ZONES.c_skills; const n = list.length;
+      const step = n > 1 ? Math.min(46, Math.max(10, (zn.h - CARD_C.h) / (n - 1))) : 0;
+      const total = CARD_C.h + (n - 1) * step; const y0 = Math.round((zn.h - total) / 2);
+      const box = h('div', { style: { position: 'absolute', left: zn.x + 'px', top: zn.y + 'px', width: zn.w + 'px', height: zn.h + 'px', zIndex: 4 } });
       list.forEach((sk, i) => {
         const d = this.cat.def(sk.id); const el = cardEl({ front: d.img, back: backOfDeck('skills'), up: true, cls: 'tap' });
-        Object.assign(el.style, { left: (zn.w - CARD_C.w) / 2 + 'px', top: i * Math.max(step, 0) + 'px', width: CARD_C.w + 'px', height: CARD_C.h + 'px' }); el.dataset.nodrag = '1';
+        Object.assign(el.style, { left: (zn.w - CARD_C.w) / 2 + 'px', top: y0 + i * step + 'px', width: CARD_C.w + 'px', height: CARD_C.h + 'px', zIndex: i }); el.dataset.nodrag = '1';
         el.querySelector('.card-in').insertAdjacentElement('beforebegin', h('div.shadow-drop'));
         el.addEventListener('click', (e) => { if (this.cam.wasDrag()) return; e.stopPropagation(); this.app.onSkillTap(sk.id); });
         box.append(el);
       });
+      if (n > 1) box.append(h('div.count', { style: { right: '-6px', top: y0 - 8 + 'px', bottom: 'auto' } }, String(n)));
       return box;
     });
-    // accesorios: pila desplegada
-    this.slot('c_acc', 'c', [eq.AC, v.canEquip], () => {
+    // accesorios: pila desplegada (centrada en la ranura)
+    this.slot('c_acc', 'c', [eq.AC, v.canEquip, dragOk], () => {
       const list = eq.AC; if (!list.length) return null;
-      const zn = L.ZONES.c_acc; const box = h('div', { style: { position: 'absolute', left: zn.x + 'px', top: zn.y + 'px', width: zn.w + 'px', height: zn.h + 'px', zIndex: 4 } });
-      const step = list.length > 1 ? Math.min(56, Math.max(14, (zn.h - CARD_C.h) / (list.length - 1))) : 0;
+      const zn = L.ZONES.c_acc; const n = list.length;
+      const step = n > 1 ? Math.min(56, Math.max(14, (zn.h - CARD_C.h) / (n - 1))) : 0;
+      const y0 = Math.round((zn.h - (CARD_C.h + (n - 1) * step)) / 2);
+      const box = h('div', { style: { position: 'absolute', left: zn.x + 'px', top: zn.y + 'px', width: zn.w + 'px', height: zn.h + 'px', zIndex: 4 } });
       list.forEach((u, i) => {
-        const el = this.tableCard(u, { x: (zn.w - CARD_C.w) / 2, y: i * step, w: CARD_C.w, h: CARD_C.h }, { onclick: () => this.app.onAccTap(u), drag: v.canEquip ? { from: 'c_acc' } : null });
+        const el = this.tableCard(u, { x: (zn.w - CARD_C.w) / 2, y: y0 + i * step, w: CARD_C.w, h: CARD_C.h }, { onclick: () => this.app.onAccTap(u), drag: v.canEquip && dragOk ? { from: 'c_acc' } : null });
         box.append(el);
       });
-      if (list.length > 1) box.append(h('div.count', { style: { right: '-6px', top: '-8px', bottom: 'auto' } }, String(list.length)));
-      return box;
-    });
-  }
-
-  /** Mochila: cartas sin equipar sobre el tablero de personaje (arrastrables) */
-  _pack() {
-    const v = this.vs; const hand = v.hand;
-    this.packInfo.textContent = `Carga ${v.stats.weight} / ${v.stats.maxWeight}`;
-    this.packInfo.classList.toggle('over', v.stats.weight > v.stats.maxWeight);
-    this.trashEl.classList.toggle('on', v.canEquip);
-    this.slot('pack_cards', 'c', [hand, v.canEquip], () => {
-      const P = L.ZONES.pack; const box = h('div.pack-cards', { style: { position: 'absolute', left: 0, top: 0, width: 0, height: 0 } });
-      if (!hand.length) {
-        box.append(h('div.pack-empty', { style: { left: P.x + 60 + 'px', top: P.y + 200 + 'px', width: P.w - 120 + 'px' } }, 'Tu mochila está vacía', h('small', 'Aquí se guardan los objetos que no llevas puestos. Arrástralos a las ranuras del tapete para equiparlos.')));
-        return box;
-      }
-      const cols = hand.length > 8 ? 4 : hand.length > 4 ? 3 : 2; const cw = CARD_P.w, ch = CARD_P.h;
-      const gapX = Math.max(8, Math.min(24, (P.w - 60 - cols * cw) / Math.max(1, cols - 1)));
-      const totalW = cols * cw + (cols - 1) * gapX; const x0 = (P.w - totalW) / 2; const y0 = 120;
-      const rows = Math.ceil(hand.length / cols); const availH = P.h - y0 - 190;
-      const gapY = rows > 1 ? Math.min(24, Math.max(-70, (availH - rows * ch) / (rows - 1))) : 0;
-      hand.forEach((u, i) => {
-        const c = i % cols, r = Math.floor(i / cols);
-        box.append(this.tableCard(u, { x: P.x + x0 + c * (cw + gapX), y: P.y + y0 + r * (ch + gapY), w: cw, h: ch }, { z: 6, onclick: () => this.app.onHandTap(u), drag: v.canEquip ? { from: 'pack' } : null }));
-      });
+      if (n > 1) box.append(h('div.count', { style: { right: '-6px', top: y0 - 8 + 'px', bottom: 'auto' } }, String(n)));
       return box;
     });
   }
 
   /** Panel lateral: ficha del aventurero y, si hay expansión, compañeros y aflicciones */
   _side() {
-    const v = this.vs; const g = this.game; const S = L.ZONES.side; const s = v.stats;
+    const v = this.vs; const g = this.game; const S = L.ZONES.side; const s = v.stats; const Zm = L.ZONES.mercs, Za = L.ZONES.afflictions;
     const prof = { agilidad: 'Agilidad', mente: 'Mente', fuerza: 'Fuerza' }[g.s.hero.proficiency] || '';
-    this.slot('side_info', 'c', [s.morality, s.eyes, s.level, g.s.stats.kills, g.s.hero.name, g.s.hero.divinidad], () =>
-      h('div.side-info', { style: { left: S.x + 'px', top: S.y + 70 + 'px', width: S.w + 'px', zIndex: 4 } },
+    this.trashEl.classList.toggle('on', v.canEquip);
+    this.slot('side_info', 'c', [s.morality, s.eyes, s.level, g.s.stats.kills, g.s.stats.turns, g.s.hero.name, g.s.hero.divinidad, s.weight, s.maxWeight, v.invCount], () => {
+      const over = s.weight > s.maxWeight;
+      const box = h('div.side-info', { style: { left: S.x + 'px', top: S.y + 66 + 'px', width: S.w + 'px', zIndex: 4 } },
         h('div.hero-name', g.s.hero.name), h('div.hero-prof', `Competencia: ${prof}`),
         h('dl', h('dt', 'Nivel'), h('dd', `${s.level} / 5`), h('dt', 'Moral'), h('dd', `${s.morality > 0 ? '+' : ''}${s.morality}`), h('dt', 'Ojos'), h('dd', `${s.eyes} / 10`),
-          h('dt', 'Enemigos'), h('dd', String(g.s.stats.kills)), h('dt', 'Turnos'), h('dd', String(g.s.stats.turns || 0)))));
-    const mercs = v.mercs || []; const afs = v.afflictions || [];
+          h('dt', 'Enemigos'), h('dd', String(g.s.stats.kills)), h('dt', 'Turnos'), h('dd', String(g.s.stats.turns || 0)), h('dt', 'Carga'), h('dd' + (over ? '.over' : ''), g.s.hero.carryRule === 'weaponsOnly' ? 'Solo armas' : `${s.weight} / ${s.maxWeight}`)));
+      const bag = h('button.side-bag', { onclick: (e) => { e.stopPropagation(); this.app.toggleTray(); } }, h('b', 'MOCHILA'), h('span', `${v.invCount} objeto${v.invCount === 1 ? '' : 's'}`));
+      box.append(bag); return box;
+    });
     const sub = (txt, y) => h('div.side-sub', { style: { left: S.x + 'px', top: y + 'px', width: S.w + 'px' } }, txt);
-    this.slot('side_mercs', 'c', [mercs.map((m) => [m.uid, m.morale])], () => {
+    const mercs = v.mercs || []; const afs = v.afflictions || [];
+    this.slot('side_mercs', 'c', [mercs.map((m) => [m.uid, m.morale, m.max])], () => {
       if (!this.cat.extras?.mercenaries) return null;
-      const box = h('div', { style: { position: 'absolute', left: 0, top: 0 } }, sub('ESBIRROS', S.y + 400));
-      const w = 150, hh = 211; const x0 = S.x + (S.w - 2 * w - 16) / 2;
-      if (!mercs.length) box.append(h('div.side-empty', { style: { left: S.x + 'px', top: S.y + 470 + 'px', width: S.w + 'px' } }, 'Sin compañeros'));
+      const box = h('div', { style: { position: 'absolute', left: 0, top: 0 } }, sub('ESBIRROS', Zm.y - 6));
+      const w = 130, hh = 183; const x0 = S.x + (S.w - 2 * w - 16) / 2;
+      if (!mercs.length) box.append(h('div.side-empty', { style: { left: S.x + 'px', top: Zm.y + 70 + 'px', width: S.w + 'px' } }, 'Sin compañeros'));
       mercs.slice(0, 3).forEach((m, i) => {
-        const el = this.tableCard(m.uid, { x: x0 + (i % 2) * (w + 16), y: S.y + 440 + Math.floor(i / 2) * (hh * 0.62), w, h: hh }, { z: 4 + i, onclick: () => this.app.onMercTap(m.uid) });
-        const pips = h('div.morale', ...Array.from({ length: m.max }, (_, k) => h('i' + (k < m.morale ? '.on' : '')))); el.append(pips); box.append(el);
+        const el = this.tableCard(m.uid, { x: x0 + (i % 2) * (w + 16), y: Zm.y + 34 + Math.floor(i / 2) * (hh * 0.64), w, h: hh }, { z: 4 + i, onclick: () => this.app.onMercTap(m.uid) });
+        el.append(h('div.morale', ...Array.from({ length: m.max }, (_, k) => h('i' + (k < m.morale ? '.on' : ''))))); box.append(el);
       });
       return box;
     });
     this.slot('side_afs', 'c', [afs], () => {
       if (!this.cat.extras?.afflictions) return null;
-      const box = h('div', { style: { position: 'absolute', left: 0, top: 0 } }, sub('AFLICCIONES', S.y + 800));
-      if (!afs.length) box.append(h('div.side-empty', { style: { left: S.x + 'px', top: S.y + 860 + 'px', width: S.w + 'px' } }, 'Sin aflicciones'));
-      afs.slice(0, 4).forEach((u, i) => box.append(this.tableCard(u, { x: S.x + 40 + i * 60, y: S.y + 840, w: 130, h: 183 }, { z: 4 + i, onclick: () => this.app.overlays.inspect({ uid: u }) })));
+      const box = h('div', { style: { position: 'absolute', left: 0, top: 0 } }, sub('AFLICCIONES', Za.y - 6));
+      if (!afs.length) box.append(h('div.side-empty', { style: { left: S.x + 'px', top: Za.y + 60 + 'px', width: S.w + 'px' } }, 'Sin aflicciones'));
+      const w = 110, hh = 155; const gap = afs.length > 1 ? Math.min(w + 12, (S.w - 60 - w) / (afs.length - 1)) : 0;
+      afs.slice(0, 5).forEach((u, i) => box.append(this.tableCard(u, { x: S.x + 30 + i * gap, y: Za.y + 34, w, h: hh }, { z: 4 + i, onclick: () => this.app.overlays.inspect({ uid: u }) })));
       return box;
     });
   }
 
-  /** Fichas: reserva (mazmorra, decorativa) y fichas del héroe (personaje, con número) */
+  /** Fichas del héroe: el mismo montón en los pocillos de los dos tapetes (sin números: la cifra está en la barra superior) */
   _tokens() {
     const s = this.vs.stats;
     const vals = { gold: s.gold, poison: s.poison, health: s.hp, blessing: s.blessing, ration: s.rations, energy: s.energy };
-    const bank = (k) => Math.max(0, BANK_TOTAL[k] - (k === 'health' ? Math.min(s.hp, BANK_TOTAL[k]) : Math.min(vals[k], BANK_TOTAL[k])));
     for (const k of Object.keys(vals)) {
-      const sq = SQUARE.has(k);
-      // reserva
-      const wl = L.WELLS[k]; const nb = Math.round(bank(k) / BANK_TOTAL[k] * MAXCHIPS[k]);
-      this.slot('bank_' + k, 'd', [nb], () => this._chips(wl, nb, k, sq, 'bank'));
-      // héroe
-      const cw = L.CWELLS[k]; const n = Math.min(vals[k], MAXCHIPS[k]);
-      this.slot('hero_' + k, 'c', [n], () => this._chips(cw, n, k, sq, 'hero'));
-      const el = this.cwNums[k]; el.textContent = vals[k]; el.style.opacity = vals[k] ? 1 : 0.55;
-      el.style.color = k === 'health' && vals[k] <= Math.max(3, s.maxHp * 0.25) ? '#ff8a78' : '#fff';
+      const n = Math.max(0, Math.min(vals[k], PILE_MAX)); const sq = SQUARE.has(k);
+      this.slot('hero_' + k, 'c', [n], () => this._chips(L.CWELLS[k], n, k, sq));
+      this.slot('bank_' + k, 'd', [n], () => this._chips(L.WELLS[k], n, k, sq));
     }
   }
-  _chips(w, n, k, sq, who) {
+  /** Montón de fichas: un racimo hexagonal de siete que va subiendo en capas; la altura y la anchura dependen de la cantidad */
+  _chips(w, n, k, sq) {
     if (n <= 0) return null;
     const box = h('div.chips', { style: { position: 'absolute', left: w.cx + 'px', top: w.cy + 'px', width: 0, height: 0, zIndex: 5, pointerEvents: 'none' } });
-    const spread = k === 'blessing' ? 4.2 : 3.6; const sz = w.r * (who === 'bank' ? 1.45 : 1.45);
+    const sz = Math.max(30, Math.min(46, w.r * 0.95)); const d = sz * 0.74; const order = [0, 3, 1, 4, 2, 5];
+    const hash = (i, m) => ((i * 2654435761 + m * 40503) >>> 0) % 1000 / 1000;
     for (let i = 0; i < n; i++) {
-      const dx = ((i * 53) % 7 - 3) * 0.7; const dy = -i * spread + w.r * 0.28;
-      box.append(h('img.chip' + (sq ? '.sq' : ''), { src: `assets/tokens/tk_${k}.png`, alt: k, style: { left: dx + 'px', top: dy + 'px', width: sz + 'px', height: sz + 'px', margin: `-${sz / 2}px 0 0 -${sz / 2}px`, transform: `rotate(${((i * 29) % 25) - 12}deg)`, zIndex: i } }));
+      const L_ = Math.floor(i / 7); const j = i % 7;
+      let x = 0, y = 0;
+      if (j > 0) { const a = ((order[j - 1] * 60 + (L_ % 2 ? 30 : 0)) * Math.PI) / 180; x = Math.cos(a) * d * (L_ % 2 ? 0.86 : 1); y = Math.sin(a) * d * (L_ % 2 ? 0.86 : 1) * 0.92; }
+      x += (hash(i, 1) - 0.5) * 3; y += (hash(i, 2) - 0.5) * 3 - L_ * sz * 0.3 + sz * 0.12;
+      box.append(h('img.chip' + (sq ? '.sq' : ''), { src: `assets/tokens/tk_${k}.png`, alt: k, style: { left: x + 'px', top: y + 'px', width: sz + 'px', height: sz + 'px', margin: `-${sz / 2}px 0 0 -${sz / 2}px`, transform: `rotate(${Math.round((hash(i, 3) - 0.5) * 30)}deg)`, zIndex: L_ * 20 + Math.round(y + 40) } }));
     }
     return box;
   }
@@ -409,10 +397,20 @@ export class Table {
     });
     mk('t_map', 'map', cat.mapImg); mk('t_mor', 'morality', cat.moralityImg);
     const place = (pawn, zone, spot) => { const r = L.ZONES[zone]; pawn.style.left = r.x + spot[0] * r.w + 'px'; pawn.style.top = r.y + spot[1] * r.h + 'px'; };
-    place(this.pawnLevel, 'map', cat.mapSpots[Math.max(1, Math.min(5, s.level))] || [0.5, 0.5]);
+    place(this.pawnLevel, 'map', mapSpotsFor(cat)[Math.max(1, Math.min(5, s.level))] || [0.5, 0.5]);
     place(this.pawnMoral, 'morality', cat.moralitySpots[String(Math.max(-5, Math.min(5, Math.round(s.morality))))] || [0.5, 0.5]);
     const mr = L.ZONES.morality; this.eyesBadge.textContent = `👁 ${s.eyes}/10`;
     this.eyesBadge.style.left = mr.x + mr.w / 2 - 50 + 'px'; this.eyesBadge.style.top = mr.y + mr.h + 6 + 'px'; this.eyesBadge.classList.toggle('hot', s.eyes >= 8);
+  }
+
+  /** El Diablillo (variante de ANEMIA): se sienta sobre el mazo de botín, luego sobre el de pociones, y se marcha */
+  _imp() {
+    const pos = this.vs.imp;
+    this.slot('imp', 'd', [pos], () => {
+      const z = pos === 'loot' ? 'loot' : pos === 'potions' ? 'potions' : null; if (!z) return null;
+      const r = L.ZONES[z]; const svg = '<svg viewBox="0 0 64 64" width="100%" height="100%"><path d="M12 22 L6 4 L24 14 Z M52 22 L58 4 L40 14 Z" fill="#7a1b11" stroke="#1b0603" stroke-width="2"/><circle cx="32" cy="36" r="22" fill="#c0301c" stroke="#1b0603" stroke-width="2.5"/><ellipse cx="23" cy="32" rx="4.5" ry="5.5" fill="#ffe9a8"/><ellipse cx="41" cy="32" rx="4.5" ry="5.5" fill="#ffe9a8"/><circle cx="23.5" cy="33" r="2" fill="#1b0603"/><circle cx="40.5" cy="33" r="2" fill="#1b0603"/><path d="M20 46 Q32 56 44 46" fill="none" stroke="#1b0603" stroke-width="3" stroke-linecap="round"/><path d="M27 48 L29 53 L31 48 M33 48 L35 53 L37 48" fill="#fff" stroke="none"/></svg>';
+      return h('div.imp', { title: 'El Diablillo', style: { left: r.x - 14 + 'px', top: r.y - 22 + 'px' }, html: svg });
+    });
   }
 
   /** Placa del turno (puerta 4) */
@@ -457,6 +455,18 @@ export class Table {
     }
   }
 
+  /** el cursor de mano solo aparece en lo que de verdad responde ahora (no en huecos vacíos o inertes) */
+  _live() {
+    if (!this.hits) return; const g = this.game; const pt = g.s.prompt?.type; const v = this.vs; const p = v.piles;
+    const on = new Set(['dungeon', 'enemies', 'loot', 'potions', 'plots', 'map', 'morality', 'c_hero', 'x_art', 'x_aff', 'x_enc']);
+    if (['pair', 'decide', 'chooseOne'].includes(pt)) { on.add('door1'); on.add('door2'); }
+    if (pt === 'setup') on.add('trappings');
+    if (v.skills.length) { on.add('c_skills'); on.add('skills'); }
+    if (v.canEquip) for (const z of ['c_head', 'c_body', 'c_main', 'c_off', 'c_acc']) on.add(z);
+    if (p.graveyard.length) on.add('graveyard'); if (p.plotsPlayed.length) on.add('plotsUsed');
+    if (p.lootUsed.length) on.add('lootUsed'); if (p.potionsUsed.length) on.add('potionsUsed'); if (p.dungeonDiscard.length) on.add('door3');
+    for (const [name, el] of Object.entries(this.hits)) el.classList.toggle('live', on.has(name));
+  }
   /** señales discretas de qué se puede tocar (sin brillos) */
   setCue(cue) { this.cue = cue || {}; this._applyCue(); }
   _applyCue() {

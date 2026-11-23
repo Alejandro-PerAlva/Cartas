@@ -7,8 +7,9 @@
  * la carta se inyecta como objeto propio del héroe sin entrar en los mazos.
  */
 import * as BASE from '../data/base.js';
+import { RNG } from './rng.js';
 import { GENERATED } from '../data/packs/index.js';
-import { PACKS, MISSING_PACKS, POWERS, FX, PLOT_OPS, ENV_FX, DUNGEON_FX } from '../data/pack-fx.js';
+import { PACKS, MISSING_PACKS, POWERS, FX, PLOT_OPS, ENV_FX, DUNGEON_FX, VARIANTS, VARIANT_GROUPS } from '../data/pack-fx.js';
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
@@ -129,7 +130,7 @@ export function listPacks() {
       return {
         id: p.id, name: p.name, es: p.es, type: p.type, number: p.number, blurb: p.blurb,
         ...(p.adventureLevel ? { adventureLevel: p.adventureLevel } : {}), rules: p.rules || [], counts,
-        heroes: g ? clone(g.heroes) : [], boss: bossDef ? clone(bossDef) : null, keyCards,
+        heroes: g ? clone(g.heroes) : [], boss: bossDef ? clone(bossDef) : null, bosses: g ? clone(g.bosses || []) : [], keyCards,
         ...(p.exclusive ? { exclusive: p.exclusive } : {}), ...(p.includes ? { includes: p.includes } : {}),
         intro, available: !!g, map: g?.meta?.map || null,
       };
@@ -137,6 +138,57 @@ export function listPacks() {
     gnome: GENERATED.gnome?.gnome ? clone(GENERATED.gnome.gnome) : null,
     missing: MISSING_PACKS,
   };
+}
+
+/* ------------------------------------------------------------------------------------------- variantes (ANEMIA 4.0) */
+/** Reglas variantes disponibles: `[{ id, name, blurb, rules[], default:false, needsPack, needsModules, exclusive, forcesHero, group, groupName }]`. */
+export function listVariants() {
+  return VARIANTS.map((v) => ({
+    id: v.id, name: v.name, blurb: v.blurb, rules: [...v.rules], default: false, needsPack: v.needsPack || null,
+    needsModules: [...(v.needsModules || [])], exclusive: [...(v.exclusive || [])], forcesHero: v.forcesHero || null,
+    group: v.group, groupName: VARIANT_GROUPS[v.group] || v.group,
+  }));
+}
+/**
+ * Valida `config.variants` contra los módulos activos. Devuelve `{ enabled: {id:true…}, all: {id:bool…} }`.
+ * Lanza un Error (en español) si hay una variante desconocida, incompatible o a la que le falta un paquete/módulo.
+ */
+export function normalizeVariants(input, modules = []) {
+  const enabled = {}; const all = Object.fromEntries(VARIANTS.map((v) => [v.id, false]));
+  for (const [id, val] of Object.entries(input || {})) {
+    const v = VARIANTS.find((x) => x.id === id);
+    if (!v) throw new Error(`Variante desconocida: ${id}`);
+    if (!val) continue;
+    enabled[id] = true; all[id] = true;
+  }
+  for (const id of Object.keys(enabled)) {
+    const v = VARIANTS.find((x) => x.id === id);
+    if (v.needsPack && !modules.includes(v.needsPack)) throw new Error(`La variante «${v.name}» necesita el paquete ${v.needsPack}.`);
+    for (const m of v.needsModules || []) if (!modules.includes(m)) throw new Error(`La variante «${v.name}» necesita el módulo ${m}.`);
+    for (const x of v.exclusive || []) if (enabled[x]) throw new Error(`Las variantes «${v.name}» y «${VARIANTS.find((y) => y.id === x).name}» son incompatibles.`);
+  }
+  return { enabled, all };
+}
+
+/**
+ * «Sin Retorno»: plan de las tres aventuras seguidas (niveles 1, 2 y 3). El nivel 1 es el juego base; la campaña elegida
+ * ocupa su hueco (nivel 2 o 3) y el otro se sortea. Usa su propio generador (no altera la secuencia de la partida).
+ */
+export function planChain(config, seed) {
+  const level = (id) => PACKS.find((p) => p.id === id && p.type === 'campaign')?.adventureLevel || 0;
+  const adventures = [1, 2, 3].map((l) => ({ level: l, campaign: null }));
+  if (config.campaign) {
+    const l = level(config.campaign);
+    if (l !== 2 && l !== 3) throw new Error('Sin Retorno solo admite una campaña de nivel 2 o 3 (la aventura de nivel 1 es el juego base).');
+    adventures[l - 1].campaign = config.campaign;
+  }
+  const rng = new RNG(((seed >>> 0) ^ 0x51ed270b) >>> 0);
+  for (const a of adventures) {
+    if (a.level === 1 || a.campaign) continue;
+    const cands = PACKS.filter((p) => p.type === 'campaign' && p.adventureLevel === a.level && GENERATED[p.id]).map((p) => p.id);
+    a.campaign = cands[rng.int(cands.length)];
+  }
+  return { total: 3, index: 0, adventures };
 }
 
 /* ------------------------------------------------------------------------------------------- campañas */
@@ -244,14 +296,18 @@ export function buildCatalog(cfg = {}) {
   const campaignMeta = cfg.campaign ? PACKS.find((p) => p.id === cfg.campaign && p.type === 'campaign') || null : null;
   if (cfg.campaign && !campaignMeta) throw new Error(`Campaña desconocida: ${cfg.campaign}`);
   const campaign = campaignMeta ? campaignMeta.id : null;
-  let modules = [...new Set(cfg.modules || [])].filter((m) => GENERATED[m] && PACKS.find((p) => p.id === m)?.type === 'module');
+  let modules = [...new Set(cfg.modules || [])].filter((m) => GENERATED[m] && ['module', 'mode'].includes(PACKS.find((p) => p.id === m)?.type));
   for (const inc of campaignMeta?.includes || []) if (!modules.includes(inc)) modules.push(inc);
   if (cfg.custom && !modules.includes('gnome')) modules.push('gnome');
   const packIds = ['base', ...(campaign ? [campaign] : []), ...modules];
   const has = (id) => packIds.includes(id);
+  const variants = normalizeVariants(cfg.variants, modules);
 
   const pools = Object.fromEntries(POOL_KEYS.map((k) => [k, []]));
-  const add = (key, defs) => { for (const d of defs) { const c = decorate(clone(d)); c.__pool = key; pools[key].push(c); } };
+  /* Cartas `only` (de una aventura o variante concreta) y jefes `special` (La Parca) no entran en los mazos; el Señor del Tiempo
+   * solo está en el mazo de jefes con la aventura Metal Inmortal. Siguen en el índice global (se resuelven por clave o por nombre). */
+  const skipCard = (d) => !!d.special || (!!d.only && !(d.only === 'metalInmortal' && d.kind === 'boss' && variants.enabled.metalInmortal));
+  const add = (key, defs) => { for (const d of defs) { if (skipCard(d)) continue; const c = decorate(clone(d)); c.__pool = key; pools[key].push(c); } };
   for (const [k, v] of Object.entries(baseDefs())) add(k, v);
 
   const intros = [];
@@ -263,7 +319,8 @@ export function buildCatalog(cfg = {}) {
     add('plots', g.plotEnemies || []);
     if (g.meta?.intro) intros.push({ id, ...g.meta.intro });
     if (id === campaign && g.meta?.map) mapImg = g.meta.map;
-    for (const [k, v] of Object.entries(g.meta?.backs || {})) if (k !== 'dungeon' || id === 'howling') backs[k] = v;
+    const isMode = PACKS.find((p) => p.id === id)?.type === 'mode';
+    for (const [k, v] of Object.entries(g.meta?.backs || {})) if ((k !== 'dungeon' || id === 'howling') && !(isMode && backs[k] && !(k === 'afflictions' && backs[k] === BASE.IMAGES.backs.afflictions))) backs[k] = v;   // (el dorso de aflicciones del juego base es el de enemigos: ANEMIA trae el suyo)
   }
   // The Howling Abyss: sustituye TODO el mazo de mazmorra del juego base
   if (has('howling')) { pools.dungeon = []; add('dungeon', GENERATED.howling.dungeon); }
@@ -319,7 +376,8 @@ export function buildCatalog(cfg = {}) {
   for (const d of all) if (d.key && !byCode.has(d.key)) byCode.set(d.key, d);
   for (const d of G.all) if (d.key && !byCode.has(d.key)) byCode.set(d.key, d);
 
-  const bossOverride = campaignMeta?.boss ? pools.bosses.find((b) => b.key === campaignMeta.boss)?.id || null : null;
+  const bossOverride = campaignMeta?.boss ? pools.bosses.find((b) => b.key === campaignMeta.boss)?.id
+    || null : (variants.enabled.metalInmortal ? pools.bosses.find((b) => b.key === 'ANB8')?.id || null : null);
   const adventureLevel = campaignMeta?.adventureLevel || 1;
   const extras = {
     environments: has('realms') && pools.environments.length > 0, artifacts: has('realms') && pools.artifacts.length > 0,
@@ -328,7 +386,8 @@ export function buildCatalog(cfg = {}) {
   };
 
   return {
-    cfg: { campaign, modules, ...(cfg.custom ? { custom: clone(cfg.custom) } : {}) }, packIds, campaignMeta, intros, extras, adventureLevel,
+    cfg: { campaign, modules, ...(cfg.custom ? { custom: clone(cfg.custom) } : {}), ...(Object.keys(variants.enabled).length ? { variants: { ...variants.enabled } } : {}) },
+    variants: variants.all, packIds, campaignMeta, intros, extras, adventureLevel,
     defs: all, byId, byCode, pools: { ...pools, loot: lootItems, mimics },
     bossOverride, mapImg, moralityImg: BASE.IMAGES.morality, backs,
     mapSpots: BASE.MAP_SPOTS, moralitySpots: BASE.MORALITY_SPOTS, merchantStock: BASE.MERCHANT_STOCK,

@@ -36,6 +36,7 @@ Object.assign(Game.prototype, {
     }
     this.emit('levelStart', { level: s.level });
     this.log(`— Comienza el nivel ${s.level} de la mazmorra —`, 'level');
+    this._amnesiaPick?.(); // Amnesia: olvidas otra habilidad en cada nivel
     // Terreno y Reliquias: carta de entorno del nivel
     if (this.cat.extras.environments) this._drawEnvironment();
     // Cetrería (Blackened): al principio de cada nivel, tirada de pájaro
@@ -56,7 +57,7 @@ Object.assign(Game.prototype, {
       z.pair = [null, null];
       s.stats.turns++;
       this.emit('turnEnd', { turn: s.turn });
-      if (s.turn >= TURNS_PER_LEVEL || z.dungeon.length < 2) { this.push(this.endLevel); return; }
+      if (s.turn >= TURNS_PER_LEVEL || z.dungeon.length < 2 || s.ctx.endLevelNow) { this.push(this.endLevel); return; }
     }
     s.ctx = {};
     this.ask('turn', { turn: s.turn + 1, left: z.dungeon.length });
@@ -117,6 +118,7 @@ Object.assign(Game.prototype, {
     const d = this.def(uid);
     this.emit('affliction', { uid, cause });
     this.log(`¡Sufres una aflicción: ${d.name}!`, 'affliction');
+    this._afflictionGained?.(d);   // Amnesia olvida una habilidad ya; Adrenalina encadena aventuras
     if (d.key === 'AF5') this.gain('poison', 1, 'infección');
     if (d.key === 'AF2' && this.isOverweight()) this.push(this._weightCheck);
     return uid;
@@ -131,6 +133,7 @@ Object.assign(Game.prototype, {
     const s = this.s; const z = s.z;
     s.turn++;
     s.ctx = { turnActive: true };
+    this._impMove?.(); // El Diablillo avanza una posición
     const a = z.dungeon.shift(); const b = z.dungeon.shift();
     z.pair = [a, b];
     this.emit('deal', { uids: [a, b] });
@@ -196,10 +199,18 @@ Object.assign(Game.prototype, {
   },
 
   /* ============================================================================ cartas de mazmorra */
-  resolveDungeon(uid, side) {
-    const d = this.def(uid);
+  resolveDungeon(uid, side, { skipEnv = false } = {}) {
+    let d = this.def(uid);
     this.s.ctx.cardUid = uid; this.s.ctx.plotUid = null; this.s.ctx.side = side;
     const env = this.envFx();
+    if (!skipEnv && env.fightBefore?.includes(d.kind)) { // La Niebla: combates antes del Campamento, el Altar y las Setas
+      this.log(`${this.def(this.s.env).name}: antes de resolver ${d.name} debes combatir contra un enemigo.`, 'env');
+      this.insert(function mistFight() { this._drawAndFight({ source: 'env', ambush: 'normal', hpBonus: this.eLvl(), initialBonus: 0 }); },
+        function mistResume() { if (!this.s.over) this.resolveDungeon(uid, side, { skipEnv: true }); });
+      return;
+    }
+    if (env.noClearing && d.kind === 'clearing') return this._swapDungeonCard(uid, side);          // El Reino Arborícola: roba otra
+    if (env.ambushAsSkirmish && d.kind === 'ambush') d = this.cat.pools.dungeon.find((x) => x.kind === 'skirmish') || this.cat.def('d6'); // La Ciudad Caída
     switch (d.kind) {
       case 'ambush': case 'skirmish': return this._combatCard(uid, d, side);
       case 'treasure': return this._treasure(d, side);
@@ -227,6 +238,7 @@ Object.assign(Game.prototype, {
 
   addPoison(n, cause) {
     if (n <= 0) return;
+    if (this.poisonImmune()) { this.log('Sangre Envenenada: eres inmune al veneno.', 'skill'); return; }
     // Bastón del Cuervo: puedes perder esa misma cantidad de salud en vez de ganar veneno
     if (this.hasCode('T28') && !this.s.over) {
       this.insert(function crow() {
@@ -313,18 +325,29 @@ Object.assign(Game.prototype, {
   },
 
   _camp(d) {
-    const h = this.hero; const env = this.envFx();
     this._campAuto(d);
     if (this.s.over) return;
+    if (this.s.ctx.gralFight) { // Gral intenta robarte el oro: combate antes de elegir las acciones del Campamento
+      this.s.ctx.gralFight = false;
+      this.insert(function gralDuel() { this._gralDuel(); }, function campMenu() { if (!this.s.over) this._campMenu(d); });
+      return;
+    }
+    this._campMenu(d);
+  },
+  _campMenu(d) {
+    const h = this.hero; const env = this.envFx();
     const opts = d.options.map((o) => ({ ...o }));
     const noRest = this.hasAffliction('AF7');
     const haveFood = h.rations > 0 || this.hasCode('L1');
     for (const o of opts) {
+      if (o.id === 'cook' && env.noCook) { o.disabled = true; o.reason = 'La Niebla: no puedes cocinar'; continue; }
+      if (o.id === 'search' && env.campNoSearch) { o.disabled = true; o.reason = 'La Ciudad Caída: solo Cocinar o Descansar'; continue; }
       if (o.id === 'cook') { o.disabled = noRest || !haveFood; o.reason = noRest ? 'Insomnio' : 'Sin raciones'; }
       if (o.id === 'rest') { o.disabled = noRest || !haveFood; o.reason = noRest ? 'Insomnio' : 'Sin raciones'; }
       if (o.id === 'search' && env.noForage) { o.disabled = true; o.reason = 'No puedes buscar comida en este entorno'; }
     }
     const seta = this.equippedUid('AT2');
+    if (env.campEndLevel) opts.push({ id: 'endLevel', label: 'Dar por terminado el nivel', text: 'Cielo Resquebrajado: puedes finalizar automáticamente este nivel.' });
     if (seta) opts.push({ id: 'goldenShroom', label: 'Cocinar la Seta de Colmena Dorada', text: 'Descarta la seta para recuperar toda tu salud.', disabled: noRest, reason: 'Insomnio' });
     if (opts.every((o) => o.disabled)) opts.push({ id: 'skip', label: 'Seguir adelante', text: 'No puedes hacer nada aquí.' });
     this.ask('choice', { title: d.name, source: this.s.ctx.cardUid || null, text: d.text, options: opts, scene: 'camp' });
@@ -362,7 +385,8 @@ Object.assign(Game.prototype, {
     } else if (id === 'goldenShroom') {
       const u = this.equippedUid('AT2'); this.discardOwned(u, 'eat');
       this.gain('hp', this.maxHp() - h.hp, 'seta dorada'); this.log('Cocinas la Seta de Colmena Dorada: recuperas toda tu salud.', 'camp');
-    } else if (id === 'skip') this.log('No puedes hacer nada en el campamento.', 'camp');
+    } else if (id === 'endLevel') { this.s.ctx.endLevelNow = true; this.log('Das por terminado el nivel desde el Campamento.', 'camp'); }
+    else if (id === 'skip') this.log('No puedes hacer nada en el campamento.', 'camp');
   },
   _altar(d) {
     if (this.envFx().noAltar) { this.log('Las Catacumbas: en este nivel no puedes resolver el Altar.', 'env'); return; }
@@ -395,11 +419,11 @@ Object.assign(Game.prototype, {
     if (row) this.applyOps(row[1], d);
   },
   _wildEncounter(uid, d, side) {
-    const P = this.cardParams(d, side); const lvl = this.s.level;
+    const P = this.cardParams(d, side); const lvl = this.eLvl();
     const drawn = [];
     for (let i = 0; i < P.draw; i++) { const u = this.draw('enemies'); if (u) drawn.push(u); }
     if (!drawn.length) { this.log('No quedan enemigos en el mazo.', 'combat'); return; }
-    const hpOf = (u) => (this.def(u).trap ? -1 : this.def(u).health);
+    const hpOf = (u) => (this.def(u).trap || typeof this.def(u).health !== 'number' ? -1 : this.def(u).health); // trampas, peligros y Mutante cuentan como la menor salud
     const max = Math.max(...drawn.map(hpOf));
     const top = drawn.filter((u) => hpOf(u) === max);
     const opts = { source: 'dungeon', cardKind: 'wildEncounter', side, ambush: 'normal', hpBonus: lvl + P.hp, initialBonus: 0 };
@@ -437,9 +461,10 @@ Object.assign(Game.prototype, {
   },
   _startPlot(uid) {
     const d = this.def(uid);
+    if (this._offerIgnorePlot?.(uid, d)) return;
     this.s.ctx.plotUid = uid;
-    (this.s.ctx.inPlay ||= []).push(uid); // tramas en resolución (aún no están en la pila de jugadas)
-    this.emit('plot', { uid });
+    const inPlay = (this.s.ctx.inPlay ||= []); if (!inPlay.includes(uid)) inPlay.push(uid); // tramas en resolución (aún no están en la pila de jugadas)
+    if (this.s.ctx.plotChecked !== uid) this.emit('plot', { uid });
     this.log(`Trama: ${d.name}.`, 'plot');
     if (d.plotEnemy) return this._plotEnemy(uid, d);
     if (d.pre?.length) {
@@ -510,7 +535,7 @@ Object.assign(Game.prototype, {
   /* ============================================================================ plot enemy / mimic */
   _mimic(uid) {
     this.log('¡Era un Mimético! Debes combatirlo.', 'combat');
-    this.startCombat(uid, { ambush: 'normal', hpBonus: this.s.level, source: 'mimic' });
+    this.startCombat(uid, { ambush: 'normal', hpBonus: this.eLvl(), source: 'mimic' });
   },
   _plotEnemy(uid, d) {
     this.startCombat(uid, { ambush: 'normal', hpBonus: 0, source: 'plot', plot: true });
@@ -523,7 +548,7 @@ Object.assign(Game.prototype, {
     this.log(reason, 'boss');
     this.q.length = 0;
     this.s.prompt = null;
-    this.push(this.divineVisit, this.startBoss);
+    this.push(...(this.s.variants?.hogarSonado ? [this._dreamHome] : []), this.divineVisit, this.startBoss);
   },
   divineVisit() {
     const h = this.hero;
@@ -544,7 +569,7 @@ Object.assign(Game.prototype, {
     const z = this.s.z;
     if (this.cat.bossOverride) return this._takeFromDeck('bosses', this.cat.bossOverride) || z.bosses[0];
     const counts = { fire: 0, undead: 0, ice: 0 };
-    for (const e of z.graveyard) { const w = this.def(e.uid).weakness; if (w in counts) counts[w]++; } // "*" (Zogar) no cuenta
+    for (const e of z.graveyard) { const w = e.weakness ?? this.def(e.uid).weakness; if (w in counts) counts[w]++; } // "*" (Zogar) no cuenta
     const max = Math.max(...Object.values(counts));
     const top = WEAKNESS_ORDER.filter((w) => counts[w] === max);
     let w;
@@ -555,6 +580,14 @@ Object.assign(Game.prototype, {
       w = beats[top[0]] === top[1] ? top[0] : top[1];
     } else w = this.rng.pick(WEAKNESS_ORDER);
     this.log(`Debilidades de tus enemigos: Fuego ${counts.fire}, No muerto ${counts.undead}, Hielo ${counts.ice} → ${w}.`, 'boss');
+    const hasW = (u) => (this.def(u).weaknesses || [this.def(u).weakness]).includes(w);
+    if (this.cat.packIds.includes('anemia')) { // ANEMIA: los jefes nuevos entran en el sorteo (Tzxefytd, sin debilidad, sirve para cualquiera)
+      const cands = z.bosses.filter((u) => hasW(u) || this.def(u).weakness === '*');
+      const pick = cands.length ? this.rng.pick(cands) : z.bosses[0];
+      this.log(`Jefes candidatos: ${cands.map((u) => this.def(u).name).join(', ')}.`, 'boss');
+      z.bosses.splice(z.bosses.indexOf(pick), 1);
+      return pick;
+    }
     const uid = z.bosses.find((u) => this.def(u).weakness === w && !this.cat.bossOverride && this.def(u).pack === 'base') || z.bosses.find((u) => this.def(u).weakness === w) || z.bosses[0];
     z.bosses.splice(z.bosses.indexOf(uid), 1);
     return uid;
@@ -566,7 +599,8 @@ Object.assign(Game.prototype, {
     this.startCombat(uid, { ambush: 'normal', hpBonus: 0, source: 'boss', boss: true });
   },
   victory() {
-    this.endGame('victory', 'Has derrotado al jefe final.');
+    if (this._nextAdventureIfChained?.()) return; // Sin Retorno / Adrenalina: la aventura siguiente
+    this.endGame('victory', 'Has derrotado al jefe final.', this.s.variants?.metalInmortal ? { ending: 'trapped' } : {});
   },
 });
 

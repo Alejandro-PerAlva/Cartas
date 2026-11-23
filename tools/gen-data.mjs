@@ -25,11 +25,20 @@ const OUT = path.join(ROOT, 'js', 'data', 'packs');
 fs.mkdirSync(OUT, { recursive: true });
 
 const ORDER = ['warren', 'blackened', 'loot_lore', 'fanny_pack', 'beasts', 'galnok', 'crystal', 'throne', 'malicia', 'spire',
-  'realms', 'troll', 'howling', 'iron_chest', 'gnome'];
+  'realms', 'troll', 'howling', 'iron_chest', 'gnome', 'anemia'];
 
 const slug = (c) => c.toLowerCase();
 const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 const splitNames = (s) => (s || '').split(/\s+y\s+/i).map((x) => x.trim()).filter(Boolean);
+/** Campos opcionales que se copian tal cual de la transcripción: `only` (carta que solo existe en una aventura/variante),
+ *  `special` (jefe especial fuera del mazo), `stats` (estadísticas de un esbirro como enemigo), `weakness2` → `weaknesses`. */
+const extra = (def, c) => {
+  if (c.only) def.only = c.only;
+  if (c.special) def.special = c.special;
+  if (c.stats) def.stats = c.stats;
+  if (c.weakness2) def.weaknesses = [c.weakness, c.weakness2];
+  return def;
+};
 const num = (v) => (typeof v === 'string' ? parseInt(v.replace('+', ''), 10) : v);
 
 /* ids y códigos ya usados por el juego base */
@@ -104,7 +113,7 @@ function normalize(pack, cards) {
   };
 
   for (const c of cards) {
-    const img = P(c.img);
+    const img = c.img ? P(c.img) : null;
     switch (c.kind) {
       case 'divider': {
         const deck = c.deck === 'other' && norm(c.name).includes('puerta azul') ? 'dungeon' : c.deck;
@@ -124,19 +133,20 @@ function normalize(pack, cards) {
         }
         break;
       }
-      case 'rules': out.rules.push({ name: c.name, text: c.text, img, ...(c.table ? { table: c.table } : {}) }); break;
+      case 'rules': out.rules.push({ name: c.name, text: c.text, img: c.img ? img : null, ...(c.group ? { group: c.group } : {}), ...(c.table ? { table: c.table } : {}),
+        ...(c.counts ? { counts: c.counts } : {}), ...(c.gold ? { gold: c.gold } : {}) }); break;
       case 'map': out.meta.map = img; break;
       case 'tracker': break;
       case 'hero': {
         if (baseHeroes.get(c.code) === c.name) break; // reimpresión de un héroe del juego base (Uln-Rolk)
-        push('heroes', { kind: 'hero', code: c.code, name: c.name, img, health: c.health, energy: c.energy, encumbrance: c.encumbrance,
+        push('heroes', extra({ kind: 'hero', code: c.code, name: c.name, img, health: c.health, energy: c.energy, encumbrance: c.encumbrance,
           rations: c.rations, gold: c.gold, trappingNames: splitNames(c.trappings), skillNames: splitNames(c.skill), proficiency: c.proficiency, pack,
-          ...(c.text ? { text: c.text } : {}), ...(c.finalScoreBonus ? { finalScoreBonus: c.finalScoreBonus } : {}) });
+          ...(c.text ? { text: c.text } : {}), ...(c.finalScoreBonus ? { finalScoreBonus: c.finalScoreBonus } : {}) }, c));
         break;
       }
       case 'boss':
-        push('bosses', { kind: 'boss', code: c.code, name: c.name, img, health: c.health, damage: c.damage, treasure: c.treasure,
-          weakness: c.weakness, purse: c.purse, text: c.text, pack, ...(c.immunities ? { immunities: c.immunities } : {}) });
+        push('bosses', extra({ kind: 'boss', code: c.code, name: c.name, img, health: c.health, damage: c.damage, treasure: c.treasure,
+          weakness: c.weakness, purse: c.purse, text: c.text, pack, ...(c.immunities ? { immunities: c.immunities } : {}) }, c));
         break;
       case 'enemy': {
         const base = { kind: 'enemy', code: c.code, name: c.name, img, text: c.text, pack };
@@ -149,13 +159,13 @@ function normalize(pack, cards) {
       }
       case 'loot': case 'trapping': case 'potion': {
         const list = c.kind === 'loot' ? 'loot' : c.kind === 'trapping' ? 'trappings' : 'potions';
-        push(list, { kind: 'item', deck: c.kind, code: c.code, name: c.name, img, price: c.price, weight: c.weight, slot: c.slot, text: c.text, pack });
+        push(list, extra({ kind: 'item', deck: c.kind, code: c.code, name: c.name, img, price: c.price, weight: c.weight, slot: c.slot, text: c.text, pack }, c));
         break;
       }
       case 'artifact':
         push('artifacts', { kind: 'item', deck: 'artifact', artifact: true, code: c.code, name: c.name, img, price: c.price, weight: c.weight, slot: c.slot, text: c.text, pack });
         break;
-      case 'skill': push('skills', { kind: 'skill', code: c.code, name: c.name, img, proficiency: c.proficiency, text: c.text, pack, ...(c.table ? { table: c.table } : {}) }); break;
+      case 'skill': push('skills', extra({ kind: 'skill', code: c.code, name: c.name, img, proficiency: c.proficiency, text: c.text, pack, ...(c.table ? { table: c.table } : {}) }, c)); break;
       case 'plot': {
         if (c.miniboss) {
           push('plotEnemies', { kind: 'plot', plotEnemy: true, miniboss: true, code: c.code, name: c.name, img, eyes: c.eyes, health: c.health, damage: c.damage,
@@ -172,8 +182,8 @@ function normalize(pack, cards) {
           blue: c.blue || [], text: c.text, pack });
         break;
       case 'mercenary':
-        push('mercenaries', { kind: 'mercenary', code: c.code, name: c.name, img, cost: c.cost, die: c.die, white: c.white || [], red: c.red || [],
-          quote: c.quote || '', text: c.text, pack });
+        push('mercenaries', extra({ kind: 'mercenary', code: c.code, name: c.name, img, cost: c.cost, die: c.die, white: c.white || [], red: c.red || [],
+          quote: c.quote || '', text: c.text, pack }, c));
         break;
       case 'dungeon1': case 'dungeon2': {
         const kind = DUNGEON_KIND[norm(c.name)];

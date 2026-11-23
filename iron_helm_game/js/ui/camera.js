@@ -9,7 +9,7 @@ export class Camera {
   constructor(viewport, table, bounds, { safe = () => ({ t: 0, b: 0, l: 0, r: 0 }), onChange } = {}) {
     this.vp = viewport; this.table = table; this.bounds = bounds; this.safe = safe; this.onChange = onChange;
     this.s = 1; this.x = 0; this.y = 0; this.enabled = true; this.anim = null;
-    this.pointers = new Map(); this.drag = null; this.pinch = null;
+    this.pointers = new Map(); this.drag = null; this.pinch = null; this.onUser = null;
     this._bind();
   }
   get minScale() { return this.fitScale() * 0.8; }
@@ -64,10 +64,10 @@ export class Camera {
 
   _bind() {
     const vp = this.vp;
-    vp.addEventListener('wheel', (e) => { if (!this.enabled) return; e.preventDefault(); cancelAnimationFrame(this.anim); this.zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY); }, { passive: false });
+    vp.addEventListener('wheel', (e) => { if (!this.enabled) return; e.preventDefault(); cancelAnimationFrame(this.anim); this.onUser?.(); this.zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY); }, { passive: false });
     vp.addEventListener('pointerdown', (e) => {
       if (!this.enabled) return;
-      if (e.target.closest('#hud, #camctl, #nav, #fan, #overlay, #actions, #pop, [data-drag]')) return;
+      if (e.target.closest('#hud, #camctl, #nav, #tray, #fan, #overlay, #hold, #dragbin, #dragkeep, #actions, #pop, [data-drag]')) return;
       cancelAnimationFrame(this.anim);
       this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (this.pointers.size === 1) this.drag = { x: e.clientX, y: e.clientY, ox: this.x, oy: this.y, moved: false, id: e.pointerId };
@@ -76,11 +76,11 @@ export class Camera {
     window.addEventListener('pointermove', (e) => {
       const p = this.pointers.get(e.pointerId); if (!p) return;
       p.x = e.clientX; p.y = e.clientY;
-      if (this.pinch && this.pointers.size >= 2) { this._movePinch(); return; }
+      if (this.pinch && this.pointers.size >= 2) { this.onUser?.(); this._movePinch(); return; }
       if (this.drag && e.pointerId === this.drag.id) {
         const dx = e.clientX - this.drag.x, dy = e.clientY - this.drag.y;
         if (!this.drag.moved && Math.hypot(dx, dy) < 6) return;
-        this.drag.moved = true; const c = this.clampPos(this.drag.ox + dx, this.drag.oy + dy); this.x = c.x; this.y = c.y; this.apply();
+        this.drag.moved = true; this.onUser?.(); const c = this.clampPos(this.drag.ox + dx, this.drag.oy + dy); this.x = c.x; this.y = c.y; this.apply();
       }
     });
     const up = (e) => {

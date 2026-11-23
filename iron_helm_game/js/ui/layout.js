@@ -3,7 +3,8 @@
  *
  * La mesa tiene DOS tableros, uno junto al otro, y la cámara se desliza entre ellos (pestañas):
  *   · Mazmorra  → tapete oficial de mazmorra (+ franja de expansiones si hace falta).
- *   · Personaje → mochila, tapete oficial del personaje y compañeros/aflicciones.
+ *   · Personaje → tapete oficial del personaje y panel del aventurero (compañeros, aflicciones, SOLTAR).
+ * La mochila no ocupa tablero: es una bandeja (`Tray`, app.js) que se abre desde el botón MOCHILA en ambas pestañas.
  * Los huecos salen del arte oficial de los tapetes (tools/analyze_mats.py).
  *
  * `L` es un objeto mutable que `configureLayout()` rellena al empezar cada partida.
@@ -11,7 +12,6 @@
 const CS = 1175 / 1900;            // escala del tapete de personaje
 export const CARD_D = { w: 200, h: 281 };   // carta sobre el tapete de mazmorra
 export const CARD_C = { w: 172, h: 242 };   // carta sobre el tapete de personaje
-export const CARD_P = { w: 168, h: 236 };   // carta en la mochila
 export const CARD_X = { w: 168, h: 236 };   // carta en la franja de expansiones
 export const BOARD_H = 1275;
 
@@ -34,17 +34,16 @@ const C = {
 const W = { gold: [1228, 98, 42], poison: [1085, 193, 42], health: [1385, 193, 42], blessing: [1230, 240, 58], ration: [1130, 365, 38], energy: [1330, 365, 38] };
 /** Pocillos del tapete de personaje (fichas del héroe) */
 const CW = { gold: [88, 88], poison: [236, 88], ration: [406, 90], blessing: [590, 88], energy: [758, 90], health: [906, 90] };
-export const BANK_TOTAL = { gold: 12, poison: 10, health: 18, blessing: 12, ration: 10, energy: 14 };
 
-export const L = { ZONES: {}, WELLS: {}, CWELLS: {}, BOARDS: {}, FOCUS: {}, TABLE: { w: 0, h: 0 }, DMAT: null, CMAT: null, PACK: null, SIDE: null, EXTRAS: null };
+export const L = { ZONES: {}, WELLS: {}, CWELLS: {}, BOARDS: {}, FOCUS: {}, TABLE: { w: 0, h: 0 }, DMAT: null, CMAT: null, SIDE: null, EXTRAS: null };
 
 export function configureLayout({ extras = false } = {}) {
   const extraW = extras ? 300 : 0;
   const dungeon = { x: 0, y: 0, w: 2110 + extraW, h: BOARD_H };
-  const char = { x: dungeon.w + 260, y: 0, w: 2110, h: BOARD_H };
+  const char = { x: dungeon.w + 260, y: 0, w: 1300, h: BOARD_H };
   const dmat = { x: dungeon.x + 60, y: 50, w: 2000, h: 1175, img: 'assets/mats/iron_helm_mat_web.jpg' };
   const cmatW = Math.round(1199 * CS);
-  const cmat = { x: char.x + 872, y: 50, w: cmatW, h: 1175, img: 'assets/mats/personaje_mat_web.jpg' };
+  const cmat = { x: char.x + 50, y: 50, w: cmatW, h: 1175, img: 'assets/mats/personaje_mat_web.jpg' };
   const rect = (m, x0, y0, x1, y1, k = 1) => ({ x: m.x + x0 * k, y: m.y + y0 * k, w: (x1 - x0) * k, h: (y1 - y0) * k });
 
   const ZONES = {};
@@ -52,15 +51,12 @@ export function configureLayout({ extras = false } = {}) {
   for (const [k, v] of Object.entries(D)) ZONES[k] = { ...rect(dmat, ...v, K), mat: 'd' };
   for (const [k, v] of Object.entries(C)) ZONES['c_' + k] = { ...rect(cmat, ...v, CS), mat: 'c' };
 
-  // mochila (panel de madera a la izquierda del tapete de personaje)
-  const pack = { x: char.x + 50, y: 50, w: 770, h: 1175 };
-  ZONES.pack = { ...pack, mat: 'c' };
-  ZONES.trash = { x: pack.x + 40, y: pack.y + pack.h - 150, w: pack.w - 80, h: 110, mat: 'c' };
-  // panel lateral derecho (compañeros y aflicciones)
+  // panel lateral derecho (ficha del aventurero, compañeros, aflicciones y papelera)
   const side = { x: cmat.x + cmat.w + 36, y: 50, w: char.x + char.w - (cmat.x + cmat.w + 36) - 50, h: 1175 };
   ZONES.side = { ...side, mat: 'c' };
-  ZONES.mercs = { x: side.x + 20, y: side.y + 70, w: side.w - 40, h: 560, mat: 'c' };
-  ZONES.afflictions = { x: side.x + 20, y: side.y + 700, w: side.w - 40, h: 420, mat: 'c' };
+  ZONES.mercs = { x: side.x + 20, y: side.y + 478, w: side.w - 40, h: 330, mat: 'c' };
+  ZONES.afflictions = { x: side.x + 20, y: side.y + 836, w: side.w - 40, h: 190, mat: 'c' };
+  ZONES.trash = { x: side.x + 28, y: side.y + side.h - 150, w: side.w - 56, h: 112, mat: 'c' };
 
   // franja de expansiones (tablero de mazmorra)
   const strip = { x: dmat.x + dmat.w + 40, y: 50, w: extraW - 40 - 20, h: 1175 };
@@ -81,9 +77,9 @@ export function configureLayout({ extras = false } = {}) {
     doorsP: { x: dmat.x + 100, y: dmat.y + 690, w: 1000, h: 490 },
     char: { ...char },
     charMat: { x: cmat.x - 10, y: cmat.y, w: cmat.w + 20, h: cmat.h },
-    charPack: { x: pack.x, y: pack.y, w: pack.w, h: pack.h },
+    charTop: { x: cmat.x - 10, y: cmat.y, w: cmat.w + 20, h: Math.round(cmat.h * 0.64) },   // héroe, habilidades y equipo (lo que más se usa en pantallas bajas)
   };
-  Object.assign(L, { ZONES, WELLS, CWELLS, FOCUS, DMAT: dmat, CMAT: cmat, PACK: pack, SIDE: side, EXTRAS: strip, extras: !!extras,
+  Object.assign(L, { ZONES, WELLS, CWELLS, FOCUS, DMAT: dmat, CMAT: cmat, SIDE: side, EXTRAS: strip, extras: !!extras,
     BOARDS: { dungeon, char }, TABLE: { w: char.x + char.w + 60, h: BOARD_H + 20 } });
   return L;
 }

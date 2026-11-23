@@ -1,4 +1,12 @@
 /** Utilidades de DOM y animación. */
+// Salvaguarda: el `append`/`prepend` nativos convierten null/undefined/false en el texto "null"/"false".
+// Con esto cualquier hijo opcional (`cond ? x : null`) se ignora, como ya hace `h()`.
+for (const proto of [Element.prototype, DocumentFragment.prototype]) {
+  for (const name of ['append', 'prepend', 'replaceChildren']) {
+    const native = proto[name];
+    proto[name] = function (...nodes) { return native.apply(this, nodes.flat(Infinity).filter((n) => n != null && n !== false)); };
+  }
+}
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 

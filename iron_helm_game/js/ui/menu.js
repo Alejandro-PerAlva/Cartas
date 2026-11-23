@@ -3,6 +3,7 @@
  * (elegir una expansión no reconstruye la pantalla ni mueve el scroll) y ficha informativa de cada expansión.
  */
 import { h } from './dom.js';
+import * as E from '../engine/index.js';
 import { buildCatalog, listPacks, buildCustomHeroPreview } from '../engine/index.js';
 import { sound } from './audio.js';
 import { cardPath } from './cards.js';
@@ -21,9 +22,9 @@ export class Menu {
   constructor(app, root) {
     this.app = app; this.root = root;
     const saved = app.loadPrefs();
-    this.cfg = { campaign: saved.campaign || null, modules: saved.modules || [] };
+    this.cfg = { campaign: saved.campaign || null, modules: saved.modules || [], variants: saved.variants || {} };
     this.heroId = saved.heroId || 'c1'; this.tab = 'hero'; this.custom = saved.custom || null; this.customPreview = null;
-    this.info = listPacks();
+    this.info = listPacks(); this.variants = E.listVariants?.() || [];
     this.build();
   }
   get packs() { return this.info.packs; }
@@ -50,16 +51,19 @@ export class Menu {
     this.renderHero();
     this.syncTabs();
   }
+  /** aviso dentro del menú (la partida aún no existe, así que no hay #toast de juego) */
+  menuToast(msg) { this.menuEl?.querySelector('.menu-note-err')?.remove(); const el = h('div.menu-note-err', msg); this.menuEl?.append(el); setTimeout(() => el.remove(), 4500); }
   syncTabs() { this.tabsEl.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === this.tab)); this.menuEl.dataset.tab = this.tab; }
   start() {
     sound.unlock(); sound.gong();
     const config = { ...this.cfg, modules: [...this.cfg.modules] }; if (this.heroId === 'custom') config.custom = { ...this.custom };
-    this.app.startGame({ heroId: this.heroId, config });
+    config.variants = this.activeVariants(); if (!Object.keys(config.variants).length) delete config.variants;
+    try { this.app.startGame({ heroId: this.heroId, config }); } catch (e) { console.error(e); sound.error(); this.menuToast(e.message || 'No se pudo empezar la partida.'); }
   }
 
   /* ================================================================ aventura y expansiones */
   buildAdventure() {
-    const camps = this.packs.filter((p) => p.type === 'campaign'); const mods = this.packs.filter((p) => p.type === 'module');
+    const camps = this.packs.filter((p) => p.type === 'campaign'); const mods = this.packs.filter((p) => p.type === 'module'); const modes = this.packs.filter((p) => p.type === 'mode');
     const row = (p, kind) => {
       const el = h('div.opt.' + kind, { dataset: { id: p?.id || 'base' } },
         h('div.opt-mark'),
@@ -73,12 +77,51 @@ export class Menu {
       h('div.opts', row(null, 'radio'), ...camps.map((p) => row(p, 'radio'))),
       h('h2', 'Expansiones modulares'), h('p.col-hint', 'Se pueden combinar con cualquier aventura. La mayoría aumenta la dificultad.'),
       h('div.opts', ...mods.map((p) => row(p, 'check'))),
+      modes.length ? [h('h2', 'Modos fanmade'), h('p.col-hint', 'Contenido no oficial hecho por la comunidad. Se combina con cualquier aventura.'), h('div.opts', ...modes.map((p) => row(p, 'check')))] : null,
+      this.variants.length ? [h('h2', 'Reglas variantes'), h('p.col-hint', 'Opcionales y independientes: actívalas a tu gusto para cambiar el reto o el tono de la partida.'), this.variantsBox = h('div.opts')] : null,
       this.info.missing?.length ? h('p.col-note', `Sin cartas en el repositorio todavía: ${this.info.missing.join(', ')}.`) : null,
       h('p.col-note', 'Juego en solitario de Jason Glover · Grey Gnome Games. Adaptación digital no oficial para uso personal.'));
-    this.updateOpts();
+    this.renderVariants(); this.updateOpts();
+  }
+  /** reglas variantes: interruptores independientes (algunas necesitan un modo, un módulo, o excluyen a otra) */
+  packOn(id) { return !!id && (this.cfg.modules.includes(id) || this.cfg.campaign === id); }
+  /** por qué una regla no se puede activar ahora (o null si se puede) */
+  variantLock(v) {
+    if (v.needsPack && !this.packOn(v.needsPack)) return `Requiere ${this.packs.find((p) => p.id === v.needsPack)?.es || v.needsPack}`;
+    const miss = (v.needsModules || []).filter((m) => !this.packOn(m));
+    if (miss.length) return `Requiere ${miss.map((m) => this.packs.find((p) => p.id === m)?.es || m).join(', ')}`;
+    return null;
+  }
+  activeVariants() { const out = {}; for (const v of this.variants) if (this.cfg.variants[v.id] && !this.variantLock(v)) out[v.id] = true; return out; }
+  /** héroe que fija una regla activa (Metal Inmortal → Gene Slash) */
+  forcedHero() { const v = this.variants.find((x) => x.forcesHero && this.activeVariants()[x.id]); return v?.forcesHero || null; }
+  renderVariants() {
+    if (!this.variantsBox) return;
+    const out = []; let group = null;
+    for (const v of this.variants) {
+      if (v.group !== group) { group = v.group; out.push(h('h3.var-group', v.groupName || v.group || '')); }
+      const lock = this.variantLock(v);
+      const el = h('div.opt.check', { dataset: { variant: v.id } }, h('div.opt-mark'),
+        h('div.opt-main', h('b', v.name), h('small', v.blurb || ''), h('small.need', lock || '')),
+        v.rules?.length ? h('button.opt-info', { title: 'Cómo funciona', 'aria-label': `Cómo funciona ${v.name}`, onclick: (e) => { e.stopPropagation(); sound.tap(); this.showVariantInfo(v); } }, icon('info', 22)) : null);
+      el.addEventListener('click', () => {
+        const why = this.variantLock(v); if (why) { sound.error(); this.app.toast(`${why}: actívalo en la lista de expansiones.`); return; }
+        sound.flip(); const on = !this.cfg.variants[v.id]; this.cfg.variants[v.id] = on;
+        if (on) for (const o of v.exclusive || []) if (this.cfg.variants[o]) { this.cfg.variants[o] = false; this.app.toast(`«${v.name}» es incompatible con «${this.variants.find((x) => x.id === o)?.name || o}»: la desactivo.`); }
+        if (on && v.forcesHero) this.heroId = v.forcesHero;
+        this.afterChange();
+      });
+      out.push(el);
+    }
+    this.variantsBox.replaceChildren(...out);
+  }
+  showVariantInfo(v) {
+    const el = h('div.modal', h('div.veil', { onclick: () => el.remove() }), h('div.sheet.scroll.wide', h('h2', v.name), v.blurb ? h('p.narr', v.blurb) : null,
+      h('ul.rules', ...(v.rules || []).map((r) => h('li', r))), h('div.btnrow', h('button.btn.primary', { onclick: () => el.remove() }, 'ENTENDIDO')), h('button.close-x', { onclick: () => el.remove(), 'aria-label': 'Cerrar' }, icon('x', 18))));
+    this.menuEl.append(el);
   }
   sub(p) {
-    const bits = [p.type === 'campaign' ? `Campaña · nivel de aventura ${p.adventureLevel ?? '?'}` : 'Módulo'];
+    const bits = [p.type === 'campaign' ? `Campaña · nivel de aventura ${p.adventureLevel ?? '?'}` : p.type === 'mode' ? 'Modo fanmade' : 'Módulo'];
     if (p.name && p.name !== p.es) bits.push(p.name);
     return bits.join(' · ');
   }
@@ -96,10 +139,14 @@ export class Menu {
   }
   afterChange() {
     this.app.savePrefs({ ...this.cfg, heroId: this.heroId, custom: this.custom });
-    this.updateOpts(); this.renderHero({ keepScroll: true });
+    this.renderVariants(); this.updateOpts(); this.renderHero({ keepScroll: true });
   }
   updateOpts() {
-    this.advCol.querySelectorAll('.opt').forEach((el) => {
+    this.advCol.querySelectorAll('.opt[data-variant]').forEach((el) => {
+      const v = this.variants.find((x) => x.id === el.dataset.variant); const locked = !!this.variantLock(v);
+      el.classList.toggle('on', !!this.cfg.variants[v.id] && !locked); el.classList.toggle('locked', locked);
+    });
+    this.advCol.querySelectorAll('.opt[data-id]').forEach((el) => {
       const id = el.dataset.id; const p = this.packs.find((x) => x.id === id);
       const on = id === 'base' ? !this.cfg.campaign : p.type === 'campaign' ? this.cfg.campaign === id : this.cfg.modules.includes(id)
         || (this.cfg.campaign && this.packs.find((x) => x.id === this.cfg.campaign)?.includes?.includes(id));
@@ -118,6 +165,7 @@ export class Menu {
   useCustom(sel, preview) { this.custom = sel; this.customPreview = preview; this.heroId = 'custom'; this.afterChange(); }
   renderHero({ keepScroll = false } = {}) {
     const cat = this.catalog(); const heroes = cat.pools.heroes;
+    const forced = this.forcedHero(); if (forced && heroes.some((x) => x.id === forced)) this.heroId = forced;
     if (this.heroId === 'custom' && !(this.gnomeOn() && this.custom)) this.heroId = heroes[0].id;
     if (this.heroId !== 'custom' && !heroes.some((x) => x.id === this.heroId)) this.heroId = heroes[0].id;
     let hero = heroes.find((x) => x.id === this.heroId);
@@ -138,17 +186,17 @@ export class Menu {
           h('span.st', { title: 'Carga' }, icon('weight', 22), String(hero.encumbrance))),
         h('dl', h('dt', 'Equipo inicial'), h('dd', trappings.length ? trappings.join(' · ') : 'Ninguno'), h('dt', 'Habilidad'), h('dd', skills.length ? skills.join(' · ') : 'Ninguna'), h('dt', 'Competencia'), h('dd', PROF[hero.proficiency] || '—')),
         hero.text ? h('p.hero-text', hero.text) : null));
-    const strip = h('div.heroes', [...heroes, ...(this.heroId === 'custom' ? [{ id: 'custom', name: hero.name, img: hero.img }] : [])].map((x) => h('button.hero-pick' + (x.id === this.heroId ? '.on' : ''), { title: x.name, onclick: () => { sound.flip(); this.heroId = x.id; this.app.savePrefs({ ...this.cfg, heroId: x.id }); this.renderHero({ keepScroll: true }); } },
+    const strip = h('div.heroes', [...heroes.filter((x) => !forced || x.id === forced), ...(this.heroId === 'custom' ? [{ id: 'custom', name: hero.name, img: hero.img }] : [])].map((x) => h('button.hero-pick' + (x.id === this.heroId ? '.on' : ''), { title: x.name, onclick: () => { sound.flip(); this.heroId = x.id; this.app.savePrefs({ ...this.cfg, heroId: x.id }); this.renderHero({ keepScroll: true }); } },
       h('img', { src: cardPath(x.img), alt: x.name }))));
-    this.heroCol.replaceChildren(...[h('h2', 'Tu héroe'), stage, h('div.heroes-wrap', strip), this.builderButton?.()].filter(Boolean));
+    this.heroCol.replaceChildren(...[h('h2', 'Tu héroe'), stage, h('div.heroes-wrap', strip), forced ? h('p.col-note', `La regla «${this.variants.find((x) => x.forcesHero)?.name}» fija a este personaje.`) : null, this.builderButton?.()].filter(Boolean));
     strip.scrollLeft = keepScroll ? sl : 0;
     const on = strip.querySelector('.on'); if (on && !keepScroll) on.scrollIntoView({ inline: 'center', block: 'nearest' });
     this.updateSummary(cat, hero);
   }
   updateSummary(cat = this.catalog(), hero = cat.pools.heroes.find((x) => x.id === this.heroId)) {
     const camp = this.cfg.campaign ? this.packs.find((p) => p.id === this.cfg.campaign)?.es : 'Mazmorra original';
-    const mods = this.cfg.modules.map((id) => this.packs.find((p) => p.id === id)?.es).filter(Boolean);
-    this.summary.replaceChildren(h('b', hero.name), ' · ', camp, mods.length ? ` · ${mods.length} módulo${mods.length > 1 ? 's' : ''}` : '');
+    const mods = this.cfg.modules.map((id) => this.packs.find((p) => p.id === id)?.es).filter(Boolean); const nv = Object.keys(this.activeVariants()).length;
+    this.summary.replaceChildren(h('b', hero.name), ' · ', camp, mods.length ? ` · ${mods.length} módulo${mods.length > 1 ? 's' : ''}` : '', nv ? ` · ${nv} regla${nv > 1 ? 's' : ''} variante${nv > 1 ? 's' : ''}` : '');
   }
 
   /* ================================================================ ficha de una expansión */
