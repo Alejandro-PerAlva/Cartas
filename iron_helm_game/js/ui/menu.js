@@ -180,14 +180,18 @@ export class Menu {
     }
     const old = this.heroCol.querySelector('.heroes'); const sl = old ? old.scrollLeft : 0;
     const name = (id) => cat.def(id)?.name || id;
-    const trappings = hero._eq || (hero.trappings || []).map(name); const skills = hero._sk || (hero.skills || []).map(name);
+    const ref = (id) => { const d = cat.def(id); return { name: d?.name || id, img: d?.img }; };
+    const byName = (n) => { let d = null; try { d = cat.findByName?.(n); d = Array.isArray(d) ? d[0] : d; } catch { /* sin carta */ } return { name: n, img: d?.img }; };
+    const trappings = hero._eq ? hero._eq.map(byName) : (hero.trappings || []).map(ref); const skills = hero._sk ? hero._sk.map(byName) : (hero.skills || []).map(ref);
+    /** nombres de cartas: tocar uno muestra la carta grande */
+    const links = (list) => list.flatMap((c, i) => [i ? ' · ' : '', c.img ? h('button.card-link', { title: `Ver ${c.name}`, onclick: () => { sound.tap(); this.zoom(c.img); } }, c.name) : c.name]);
     const pk = hero.pack !== 'base' ? this.packs.find((p) => p.id === hero.pack) : null;
     const stage = h('div.hero-stage',
       h('div.hero-card', h('img', { src: cardPath(hero.img), alt: hero.name })),
       h('div.hero-info', h('div.hero-name', hero.name), pk ? h('div.hero-pack', pk.es) : null,
         h('div.hero-stats', ...[['health', hero.health, 'Salud'], ['energy', hero.energy, 'Energía'], ['ration', hero.rations, 'Raciones'], ['gold', hero.gold, 'Oro']].map(([k, v, t]) => h('span.st', { title: t }, h('img', { src: `assets/tokens/tk_${k}.png`, alt: t }), String(v))),
           h('span.st', { title: 'Carga' }, icon('weight', 22), String(hero.encumbrance))),
-        h('dl', h('dt', 'Equipo inicial'), h('dd', trappings.length ? trappings.join(' · ') : 'Ninguno'), h('dt', 'Habilidad'), h('dd', skills.length ? skills.join(' · ') : 'Ninguna'), h('dt', 'Competencia'), h('dd', PROF[hero.proficiency] || '—')),
+        h('dl', h('dt', 'Equipo inicial'), h('dd', ...(trappings.length ? links(trappings) : ['Ninguno'])), h('dt', 'Habilidad'), h('dd', ...(skills.length ? links(skills) : ['Ninguna'])), h('dt', 'Competencia'), h('dd', PROF[hero.proficiency] || '—')),
         hero.text ? h('p.hero-text', hero.text) : null));
     const strip = h('div.heroes', [...heroes.filter((x) => !forced || x.id === forced), ...(this.heroId === 'custom' ? [{ id: 'custom', name: hero.name, img: hero.img }] : [])].map((x) => h('button.hero-pick' + (x.id === this.heroId ? '.on' : ''), { title: x.name, onclick: () => { sound.flip(); this.heroId = x.id; this.app.savePrefs({ ...this.cfg, heroId: x.id }); this.renderHero({ keepScroll: true }); } },
       h('img', { src: cardPath(x.img), alt: x.name }))));
