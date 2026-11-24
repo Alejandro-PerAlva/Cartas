@@ -346,6 +346,7 @@ export class Director {
     await this.arena.defeated();
     await this.hold({ lines: [`Has derrotado a ${this.arena.def?.name || 'tu enemigo'}`], cue: 'Toca para continuar', min: 600 });
     await this.arena.enemyDie();
+    await this.arena.end();   // la arena se cierra ya: el botín, las fichas y lo que ocurra después se ven sobre la mesa, no tapados por el combate
   }
   async on_throw(ev) { sound.sword(); await this.wait(150); }
   async on_potionThrown() { sound.potion(); await this.wait(150); }
@@ -463,10 +464,12 @@ export class Director {
     if (ev.purpose === 'reroll') return;
     const titles = { altar: 'Altar', cetreria: 'Cetrería', apuesta: 'Apuesta', ocultacion: 'Ocultación', bloquear: 'Bloquear', trap: 'Trampa de foso', tabla: 'Tirada', espejo: 'El espejo', capsula: 'Cápsula Corazón', shuriken: 'Shuriken', sombra: 'Sombra' };
     const label = titles[ev.purpose] || 'Tirada';
-    const box = h('div', { style: 'position:fixed;left:50%;top:44%;width:min(420px,86vw);height:200px;transform:translate(-50%,-50%);z-index:410;border-radius:22px;background:url(assets/textures/felt.jpg) center/320px,#1d4a33;box-shadow:inset 0 0 50px 8px rgba(0,0,0,.65),0 0 0 7px #3b2412,0 20px 50px #000e;animation:rise .3s both' },
-      h('div', { style: 'position:absolute;left:0;right:0;top:-44px;text-align:center;font:800 22px var(--font-title);color:var(--gold2);text-shadow:0 2px 6px #000' }, label));
+    const vh = innerHeight, vw = innerWidth; const bh = Math.round(Math.max(120, Math.min(200, vh * 0.5))); const bw = Math.min(420, vw * 0.86);
+    const top = Math.max(bh / 2 + 44, Math.min(vh * 0.44, vh - bh / 2 - 16));   // la caja y su rótulo siempre caben en pantalla (también en horizontal)
+    const box = h('div', { style: `position:fixed;left:50%;top:${top}px;width:${bw}px;height:${bh}px;transform:translate(-50%,-50%);z-index:410;border-radius:22px;background:url(assets/textures/felt.jpg) center/320px,#1d4a33;box-shadow:inset 0 0 50px 8px rgba(0,0,0,.65),0 0 0 7px #3b2412,0 20px 50px #000e;animation:fadein .3s both` },
+      h('div', { style: `position:absolute;left:0;right:0;top:${vh < 560 ? '6px' : '-38px'};text-align:center;font:800 ${vh < 560 ? 16 : 20}px var(--font-title);color:var(--gold2);text-shadow:0 2px 6px #000;z-index:2;pointer-events:none` }, label));
     const dz = h('div', { style: 'position:absolute;inset:0' }); box.append(dz); document.body.append(box);
-    const { DiceTray } = await import('./dice.js'); const tray = new DiceTray(dz, { size: 62 });
+    const { DiceTray } = await import('./dice.js'); const tray = new DiceTray(dz, { size: Math.round(Math.min(62, bh * 0.34)) });
     await tray.throw(ev.values, { black: ev.who === 'enemy' });
     const sum = ev.values.reduce((a, b) => a + b, 0);
     const txt = ev.values.length === 2 ? (ev.purpose === 'altar' || ev.purpose === 'trap' ? `${Math.max(...ev.values)} − ${Math.min(...ev.values)} = ${Math.abs(ev.values[0] - ev.values[1])}` : `= ${sum}`) : '';

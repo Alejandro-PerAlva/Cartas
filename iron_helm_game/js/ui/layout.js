@@ -79,8 +79,9 @@ export function configureLayout({ extras = false, side: withSide = false } = {})
   const FOCUS = {
     dungeon: { ...dungeon },
     dungeonMat: { x: dmat.x, y: dmat.y, w: dmat.w, h: dmat.h },
-    doors: { x: dmat.x + 110, y: dmat.y + 690, w: 1440, h: 490 },
-    doorsP: { x: dmat.x + 100, y: dmat.y + 690, w: 1000, h: 490 },
+    // las puertas están a la derecha: descarte · mazo · puerta 1 · puerta 2 (x 530 → 1460 del tapete)
+    doors: { x: dmat.x + 505, y: dmat.y + 690, w: 980, h: 490 },
+    doorsP: { x: dmat.x + 750, y: dmat.y + 690, w: 735, h: 490 },
     char: { ...char },
     charMat: { x: cmat.x - 10, y: cmat.y, w: cmat.w + 20, h: cmat.h },
     charTop: { x: cmat.x - 10, y: cmat.y, w: cmat.w + 20, h: Math.round(cmat.h * 0.64) },   // héroe, habilidades y equipo (lo que más se usa en pantallas bajas)

@@ -615,7 +615,7 @@ ul.rules { margin: 0; padding-left: 20px; font-size: 17px; line-height: 1.3; } u
 
 .tab-char #hint { display: none; }
 @media (max-height: 560px) {
-  .inn-panel { padding: 8px 14px 10px; } .inn-head h2 { font-size: 20px; } .inn-mine { display: none; } .inn-info { min-height: 0; padding: 2px 0; }
+  .inn-panel { padding: 8px 14px 10px; } .inn-head h2 { font-size: 20px; } .inn-info { min-height: 0; padding: 2px 0; }
   .inn-panel .pickwrap.inline { padding: 14px 6px 18px; } .inn-foot { padding-top: 4px; } .inn-foot .btn.big { min-height: 38px; font-size: 14px; padding: 6px 18px; }
 }
 
@@ -724,3 +724,15 @@ ul.rules { margin: 0; padding-left: 20px; font-size: 17px; line-height: 1.3; } u
 
 /* nombres de carta tocables en la ficha del héroe */
 .card-link { padding: 0; border: 0; background: none; font: inherit; color: var(--gold2); text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; } .card-link:hover { color: #fff1c4; }
+
+/* ---- v3.3 · posada en apaisado: la tienda a la izquierda y «Tu equipo» siempre visible a la derecha (antes se ocultaba) ---- */
+@media (max-height: 560px) and (orientation: landscape) {
+  .inn-panel { display: grid; grid-template-columns: minmax(0, 1fr) clamp(132px, 22vw, 190px); grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: "head head" "tabs mine" "gear mine" "foot foot"; column-gap: 12px; }
+  .inn-head { grid-area: head; } .inn-tabs { grid-area: tabs; margin: 4px 0 0; } .inn-gear { grid-area: gear; } .inn-foot { grid-area: foot; }
+  .inn-tabs:empty { display: none; }
+  .inn-mine { grid-area: mine; grid-row: 2 / 4; display: flex; flex-direction: column; min-height: 0; border-top: 0; border-left: 1px solid rgba(138, 106, 44, .5); padding: 2px 0 0 10px; }
+  .mine-title { font-size: 12px; letter-spacing: .1em; } .mine-title small { font-size: 12px; display: block; }
+  .mine-row { flex: 1; min-height: 0; flex-wrap: wrap; align-content: flex-start; overflow-x: hidden; overflow-y: auto; gap: 12px 8px; padding: 6px 2px 12px; touch-action: pan-y; }
+  .mini-eq { width: clamp(46px, 7vw, 58px); }
+  .inn-panel .pickwrap.inline { padding: 10px 6px 26px; } .inn-panel .pickrow { gap: 20px 10px; }
+}

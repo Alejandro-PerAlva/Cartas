@@ -102,7 +102,8 @@ export class Game {
     s.z.trappings = mkAll(p.trappings);
     s.z.skills = mkAll(p.skills);
     s.z.afflictions = rng.shuffle(mkAll(p.afflictions));
-    s.z.bosses = mkAll(p.bosses);
+    // con un jefe fijado (campaña o Metal Inmortal) solo está ese jefe: no se mezcla con los básicos
+    s.z.bosses = mkAll(cat.bossOverride ? p.bosses.filter((b) => b.id === cat.bossOverride) : p.bosses);
     if (cat.extras.environments) s.z.environments = rng.shuffle(mkAll(p.environments));
     if (cat.extras.artifacts) s.z.artifacts = rng.shuffle(mkAll(p.artifacts));
     if (cat.extras.mercenaries && !s.chain?.index) s.z.mercenaries = mkAll(p.mercs.map((d) => ({ ...d, copies: 1 })));

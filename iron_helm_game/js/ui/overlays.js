@@ -161,12 +161,19 @@ export class Overlays {
   showOverweight(pr) {
     const g = this.g; let selected = null;
     const row = h('div.pickrow', { style: '--pcw:min(15vw, 30vh)' }); const bar = h('div.pick-foot');
+    // al tocar una carta se ve en grande (como en el resto de menús), con USAR / SOLTAR a mano
+    const look = (uid) => {
+      const acts = []; if (g.usableNow?.(uid)) acts.push({ label: 'USAR', fn: () => this.app.act('use', { uid }) });
+      acts.push({ label: 'SOLTAR', cls: 'primary', fn: () => this.app.act('dropOver', { uid }) });
+      this.inspect({ uid, actions: acts, note: `Peso ${g.weightOf(uid)} · te sobran ${Math.max(0, g.weight() - g.maxWeight())}` });
+    };
     const rebuild = () => {
       row.innerHTML = ''; bar.innerHTML = '';
-      for (const uid of g.allItems()) row.append(h('div.pc' + (selected === uid ? '.sel' : ''), { dataset: { uid }, onclick: () => { sound.tap(); selected = uid; rebuild(); }, oncontextmenu: (e) => { e.preventDefault(); this.inspect({ uid }); } }, this.faceCard(uid), h('div.price', icon('weight', 14), ` ${g.weightOf(uid)}`)));
+      for (const uid of g.allItems()) row.append(h('div.pc' + (selected === uid ? '.sel' : ''), { dataset: { uid }, onclick: () => { sound.tap(); selected = uid; rebuild(); look(uid); }, oncontextmenu: (e) => { e.preventDefault(); look(uid); } }, this.faceCard(uid), h('div.price', icon('weight', 14), ` ${g.weightOf(uid)}`)));
       const canUse = selected != null && !!g.usableNow?.(selected);
       if (canUse) bar.append(h('button.btn', { onclick: () => { sound.click(); this.app.act('use', { uid: selected }); } }, 'USAR'));
-      bar.append(h('button.btn.primary' + (selected ? '' : '.off'), { onclick: () => { if (selected) { sound.click(); this.app.act('dropOver', { uid: selected }); } } }, 'SOLTAR'));
+      bar.append(h('button.btn' + (selected ? '' : '.off'), { onclick: () => { if (selected) { sound.click(); look(selected); } } }, 'VER'),
+        h('button.btn.primary' + (selected ? '' : '.off'), { onclick: () => { if (selected) { sound.click(); this.app.act('dropOver', { uid: selected }); } } }, 'SOLTAR'));
     };
     const carry = g.s.hero.carryRule === 'weaponsOnly' ? 'Solo puedes llevar armas: dos de una mano o una de dos manos.' : `Llevas ${g.weight()} de carga y tu límite es ${g.maxWeight()}. Suelta ${pr.need} o más de peso para continuar.`;
     const el = h('div.modal', h('div.veil.mid'), h('div.pick-head', h('div.pick-title', 'Vas demasiado cargado'), h('div.pick-sub', carry)), h('div.pickwrap', row), bar);
