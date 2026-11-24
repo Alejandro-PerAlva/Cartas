@@ -85,18 +85,21 @@ def brass_gradient(size):
     return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8), 'RGB')
 
 
+KNIGHT = os.path.join(ROOT, 'tools', 'brand', 'knight_src.webp')   # portada de BoardGameGeek (194x300): el caballero
+KNIGHT_BOX = (80, 56, 184, 160)   # recorte cuadrado de cabeza y hombros dentro de la portada
+
+
 def emblem(diameter):
-    """Escudo con espadas recortado del tapete, como disco de `diameter` px, con viñeta de piedra."""
-    mat = Image.open(MAT).convert('RGB')
-    cx, cy = SHIELD_CENTER
-    h = SHIELD_HALF
-    crop = mat.crop((cx - h, cy - h, cx + h, cy + h)).resize((diameter, diameter), Image.LANCZOS)
-    crop = ImageEnhance.Contrast(crop).enhance(1.12)
-    crop = ImageEnhance.Color(crop).enhance(1.10)
+    """Caballero de la portada recortado como disco de `diameter` px, reescalado por pasos y afinado (el original es muy pequeño)."""
+    from PIL import ImageFilter
+    im = Image.open(KNIGHT).convert('RGB').crop(KNIGHT_BOX)
+    while im.width * 2 < diameter:                      # duplicar por pasos con Lanczos suaviza menos que un salto único
+        im = im.resize((im.width * 2, im.height * 2), Image.LANCZOS).filter(ImageFilter.UnsharpMask(1.4, 70, 2))
+    crop = im.resize((diameter, diameter), Image.LANCZOS).filter(ImageFilter.UnsharpMask(2, 60, 2))
+    crop = ImageEnhance.Contrast(crop).enhance(1.08)
     a = np.asarray(crop).astype(np.float32) / 255.0
-    v = radial(diameter, 0.52, 1.0, 1.1)[..., None]
-    a = a * (0.34 + 0.66 * v)  # la piedra se oscurece hacia el borde para que el escudo destaque
-    a *= np.array([1.02, 0.97, 0.90], dtype=np.float32)
+    v = radial(diameter, 0.70, 1.0, 1.1)[..., None]
+    a = a * (0.55 + 0.45 * v)
     return Image.fromarray(np.clip(a * 255, 0, 255).astype(np.uint8), 'RGB')
 
 
@@ -240,6 +243,12 @@ def main():
     for n in ('ic_launcher.xml', 'ic_launcher_round.xml'):
         with open(os.path.join(d, n), 'w') as f:
             f.write(xml)
+    # iconos web (favicon, pantalla de inicio): el medallón sobre fondo transparente
+    web = os.path.join(ROOT, 'iron_helm_game', 'icons')
+    os.makedirs(web, exist_ok=True)
+    med = medallion(M, int(M * 0.96))
+    for n, sz in (('favicon-32.png', 32), ('favicon-64.png', 64), ('icon-180.png', 180), ('icon-192.png', 192), ('icon-512.png', 512)):
+        save(med, os.path.join(web, n), sz)
     # vistas previas fuera del repo (si se indica una carpeta)
     prev = sys.argv[1] if len(sys.argv) > 1 else None
     if prev:
