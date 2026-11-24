@@ -725,6 +725,11 @@ ul.rules { margin: 0; padding-left: 20px; font-size: 17px; line-height: 1.3; } u
 /* nombres de carta tocables en la ficha del héroe */
 .card-link { padding: 0; border: 0; background: none; font: inherit; color: var(--gold2); text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; } .card-link:hover { color: #fff1c4; }
 
+/* caja PWA offline (solo web HTTPS/localhost) */
+.pwa-box { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 14px; padding: 10px 14px; border-radius: 9px; border: 2px solid #3d2c16; background: linear-gradient(rgba(34, 21, 10, .88), rgba(18, 11, 5, .92)); }
+.pwa-box .opt-main { flex: 1 1 200px; } .pwa-box .pwa-tip { margin-top: 4px; color: var(--gold2); font-style: italic; }
+.pwa-box .btn { flex: none; }
+
 /* ---- v3.3 · posada en apaisado: la tienda a la izquierda y «Tu equipo» siempre visible a la derecha (antes se ocultaba) ---- */
 @media (max-height: 560px) and (orientation: landscape) {
   .inn-panel { display: grid; grid-template-columns: minmax(0, 1fr) clamp(132px, 22vw, 190px); grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: "head head" "tabs mine" "gear mine" "foot foot"; column-gap: 12px; }

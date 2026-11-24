@@ -12,6 +12,7 @@ import { sound } from './audio.js';
 import { setBacks } from './cards.js';
 import { Tray } from './tray.js';
 import { icon } from './icons.js';
+import { initPwa } from './pwa.js';
 
 const SAVE_KEY = 'ironhelm.save.v2', PREF_KEY = 'ironhelm.prefs.v2', SET_KEY = 'ironhelm.settings.v2', SCORE_KEY = 'ironhelm.scores.v2';
 /** reading: 'tap' = las cartas esperan a que toques · 'timed' = esperan un tiempo proporcional al texto · 'off' = sin pausas */
@@ -27,6 +28,9 @@ export class App {
     sound.setMuted(!this.settings.sound); speed.k = this.settings.fast ? 0.55 : 1; window.__speed = (k) => { speed.k = k; };
     this.game = null; this.table = null; this.busy = false; this.screen = null; this.origins = new Map();
     this._keys();
+    initPwa({ onUpdate: () => this.toast('Actualización lista para la próxima vez que abras el juego.') });
+    window.addEventListener('pointerdown', () => { if (this.settings.sound) sound.unlock(); }, { passive: true });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && this.settings.sound && sound.ctx) sound.unlock(); });
     this.showMenu();
   }
   _json(k, d) { try { return JSON.parse(this.ls.getItem(k)) ?? d; } catch { return d; } }

@@ -1,0 +1,40 @@
+name: Publicar PWA en GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund && npm run build
+      - name: Preparar ficheros web de producción
+        run: |
+          mkdir -p _site
+          cp iron_helm_game/index.html iron_helm_game/manifest.webmanifest iron_helm_game/sw.js iron_helm_game/pwa-assets.json iron_helm_game/app.bundle.js _site/
+          cp -r iron_helm_game/css iron_helm_game/fonts iron_helm_game/icons iron_helm_game/assets _site/
+          touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

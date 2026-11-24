@@ -67,9 +67,9 @@ Cero Energía, Gastar XP, Hogar Soñado, Sin Retorno, Justo Antes de Morir, Enfr
 Lugares de Retiro, Encantamientos, Momentos de Paz y la aventura Metal Inmortal). Algunas necesitan el modo, un módulo concreto o se excluyen entre sí;
 el menú lo indica.
 
-## Android
-`node tools/build-apk.mjs` (o `npm run apk`) genera `releases/IronHelm.apk`: la misma web empaquetada en una app nativa mínima (WebView sin conexión,
-pantalla completa, notch, botón atrás, rotación). Ver [`android/README.md`](android/README.md).
+## Android e iOS (APK y PWA)
+- **Android (APK nativa):** `node tools/build-apk.mjs` (o `npm run apk`) genera `releases/IronHelm.apk`: la misma web empaquetada en una app nativa mínima (WebView sin conexión, pantalla completa, notch, botón atrás, rotación). Ver [`android/README.md`](android/README.md).
+- **iOS y Android (PWA sin conexión):** [`iron_helm_game/manifest.webmanifest`](iron_helm_game/manifest.webmanifest) y [`iron_helm_game/sw.js`](iron_helm_game/sw.js) permiten servir la web por HTTPS (p. ej. mediante [`.github/workflows/pages.yml`](.github/workflows/pages.yml) en GitHub Pages) e instalarla en iPhone (*Safari → Compartir → Añadir a pantalla de inicio*) o Android (*Chrome → Instalar aplicación*), con juego base automático en caché y descarga opcional de todas las expansiones sin conexión.
 
 ## Desarrollo
 

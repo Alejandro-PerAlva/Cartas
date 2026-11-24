@@ -14,7 +14,7 @@ class Sound {
     return true;
   }
   /** debe llamarse tras un gesto del usuario */
-  unlock() { if (this._init() && this.ctx.state === 'suspended') this.ctx.resume(); }
+  unlock() { if (this._init() && (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted')) this.ctx.resume().catch(() => {}); }
   setMuted(m) { this.muted = m; if (this.master) this.master.gain.value = m ? 0 : this.vol; }
   _noise(sec) { const b = this.ctx.createBuffer(1, this.ctx.sampleRate * sec, this.ctx.sampleRate); const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; return b; }
   _ok() { return !this.muted && this._init() && this.ctx.state !== 'closed'; }

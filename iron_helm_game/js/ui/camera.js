@@ -103,6 +103,8 @@ export class Camera {
       if (this.pointers.size === 0) { if (this.drag?.moved) this.justDragged = performance.now(); this.drag = null; }
     };
     window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+    // Safari en iOS dispara eventos gesture* propietarios al pellizcar: los anulamos para que mande la cámara del tablero
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach((t) => vp.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
     window.addEventListener('resize', () => { this._vr = null; this.onResize?.(); });
     window.addEventListener('orientationchange', () => { this._vr = null; });
     // el navegador puede desplazar contenedores ocultos al enfocar elementos: la cámara manda

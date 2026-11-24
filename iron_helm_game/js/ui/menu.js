@@ -10,6 +10,7 @@ import { cardPath } from './cards.js';
 import { icon } from './icons.js';
 import { Builder } from './builder.js';
 import { manualBody } from './manual.js';
+import { isWebPwaEnv, isIosSafariNotStandalone, getOfflineStats, downloadAllOffline, onOfflineProgress } from './pwa.js';
 
 const PROF = { agilidad: 'Agilidad', mente: 'Mente', fuerza: 'Fuerza' };
 const COUNT_LABEL = {
@@ -82,8 +83,43 @@ export class Menu {
       modes.length ? [h('h2', 'Modos fanmade'), h('p.col-hint', 'Contenido no oficial hecho por la comunidad. Se combina con cualquier aventura.'), h('div.opts', ...modes.map((p) => row(p, 'check')))] : null,
       this.variants.length ? [h('h2', 'Reglas variantes'), h('p.col-hint', 'Opcionales y independientes: actívalas a tu gusto para cambiar el reto o el tono de la partida.'), this.variantsBox = h('div.opts')] : null,
       this.info.missing?.length ? h('p.col-note', `Sin cartas en el repositorio todavía: ${this.info.missing.join(', ')}.`) : null,
+      this._buildPwaBox(),
       h('p.col-note', 'Juego en solitario de Jason Glover · Grey Gnome Games. Adaptación digital no oficial para uso personal.'));
     this.renderVariants(); this.updateOpts();
+  }
+  _buildPwaBox() {
+    if (!isWebPwaEnv()) return null;
+    const msg = h('small', 'Comprobando almacenamiento sin conexión…');
+    const tip = isIosSafariNotStandalone() ? h('small.pwa-tip', 'En iPhone: pulsa Compartir ↑ → «Añadir a pantalla de inicio» para instalarlo como app.') : null;
+    const btn = h('button.btn.sm.quiet', { onclick: () => { sound.tap(); downloadAllOffline(); } }, 'GUARDAR TODO OFFLINE');
+    const box = h('div.pwa-box', h('div.opt-main', h('b', 'Juego sin conexión'), msg, tip), btn);
+    const refresh = async () => {
+      const st = await getOfflineStats();
+      if (!st || !box.isConnected) return;
+      if (st.cached >= st.total) {
+        msg.textContent = `Todas las cartas guardadas (${st.total}/${st.total}).`;
+        btn.textContent = 'LISTO ✔'; btn.disabled = true; btn.classList.add('off');
+      } else {
+        msg.textContent = st.baseCached >= st.baseTotal
+          ? `Juego base listo · ${st.cached}/${st.total} cartas guardadas.`
+          : `${st.cached}/${st.total} cartas guardadas en el dispositivo.`;
+        btn.disabled = st.busy;
+      }
+    };
+    const off = onOfflineProgress((p) => {
+      if (!box.isConnected) { off(); return; }
+      if (p.busy) {
+        msg.textContent = p.scope === 'base'
+          ? `Guardando juego base offline (${p.done}/${p.total})…`
+          : `Descargando cartas sin conexión (${p.done}/${p.total})…`;
+        if (p.scope === 'all') { btn.textContent = `${Math.round((p.done / Math.max(1, p.total)) * 100)}%`; btn.disabled = true; }
+      } else {
+        btn.textContent = 'GUARDAR TODO OFFLINE'; btn.disabled = false;
+        refresh();
+      }
+    });
+    refresh();
+    return box;
   }
   /** reglas variantes: interruptores independientes (algunas necesitan un modo, un módulo, o excluyen a otra) */
   packOn(id) { return !!id && (this.cfg.modules.includes(id) || this.cfg.campaign === id); }
