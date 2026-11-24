@@ -27,7 +27,8 @@ const D = {
 };
 /** Huecos del tapete de personaje (coordenadas originales 1199×1900) */
 const C = {
-  hero: [92, 165, 385, 640], head: [452, 165, 750, 640], skills: [815, 165, 1110, 640],
+  // la fila superior: el hueco real del arte queda ~30 px (originales) más abajo que el centro del rectángulo
+  hero: [92, 196, 385, 671], head: [452, 196, 750, 671], skills: [815, 196, 1110, 671],
   main: [92, 710, 385, 1115], body: [452, 710, 750, 1115], off: [815, 710, 1110, 1115], acc: [92, 1185, 385, 1590],
 };
 /** Pocillos de fichas del tapete de mazmorra (la RESERVA), centro y radio en coords mostradas */

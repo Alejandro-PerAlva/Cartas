@@ -275,22 +275,17 @@ export class Table {
     slotCard('c_head', 'c_head', eq.CA); slotCard('c_body', 'c_body', eq.CP); slotCard('c_main', 'c_main', eq.MP);
     const two = eq.MP && g.def(eq.MP).slot === '2M';
     if (eq.OM) slotCard('c_off', 'c_off', eq.OM); else if (two) slotCard('c_off', 'c_off', eq.MP, { dim: true, tag: 'DOS MANOS' }); else this.slot('c_off', 'c', ['none'], () => null);
-    // habilidades: cascada centrada en la ranura (la primera carta queda a la misma altura que las demás)
+    // habilidades: pila como el resto de mazos (la última aprendida arriba); tocarla abre el libro de habilidades
     this.slot('c_skills', 'c', v.skills.map((s) => s.id), () => {
       const list = v.skills; if (!list.length) return null;
-      const zn = L.ZONES.c_skills; const n = list.length;
-      const step = n > 1 ? Math.min(46, Math.max(5, (zn.h - CARD_C.h) / (n - 1))) : 0;
-      const total = CARD_C.h + (n - 1) * step; const y0 = Math.round((zn.h - total) / 2);
-      const box = h('div', { style: { position: 'absolute', left: zn.x + 'px', top: zn.y + 'px', width: zn.w + 'px', height: zn.h + 'px', zIndex: 4 } });
-      list.forEach((sk, i) => {
-        const d = this.cat.def(sk.id); const el = cardEl({ front: d.img, back: backOfDeck('skills'), up: true, cls: 'tap' });
-        Object.assign(el.style, { left: (zn.w - CARD_C.w) / 2 + 'px', top: y0 + i * step + 'px', width: CARD_C.w + 'px', height: CARD_C.h + 'px', zIndex: i }); el.dataset.nodrag = '1';
-        el.querySelector('.card-in').insertAdjacentElement('beforebegin', h('div.shadow-drop'));
-        el.addEventListener('click', (e) => { if (this.cam.wasDrag()) return; e.stopPropagation(); this.app.onSkillTap(sk.id); });
-        box.append(el);
-      });
-      if (n > 1) box.append(h('div.count', { style: { right: '-6px', top: y0 - 8 + 'px', bottom: 'auto' } }, String(n)));
-      return box;
+      const rect = cardRect('c_skills', CARD_C); const top = this.cat.def(list[list.length - 1].id);
+      const el = h('div.pile', { dataset: { nodrag: '1' }, style: { left: rect.x + 'px', top: rect.y + 'px', width: rect.w + 'px', height: rect.h + 'px', zIndex: 4 } });
+      const n = Math.min(5, list.length - 1); const sh = [];
+      for (let i = 1; i <= n; i++) sh.push(`${i}px ${i * 1.4}px 0 ${i % 2 ? '#e8dcc0' : '#2a2018'}`); sh.push('3px 8px 14px rgba(0,0,0,.6)');
+      el.append(h('div.stack', { style: { backgroundImage: `url(${cardPath(top.img)})`, boxShadow: sh.join(',') } }));
+      if (list.length > 1) el.append(h('div.count', String(list.length)));
+      el.addEventListener('click', (e) => { if (this.cam.wasDrag()) return; e.stopPropagation(); this.app.onZoneTap('c_skills', e); });
+      return el;
     });
     // accesorios: pila desplegada (centrada en la ranura)
     this.slot('c_acc', 'c', [eq.AC, v.canEquip, dragOk], () => {
